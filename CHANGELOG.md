@@ -6,6 +6,7 @@
 - 分组依据只用宿主已有信息（不猜模型名）：provider id 或 provider 名称命中官方厂商关键字（deepseek、openai、anthropic、google、xai、mistral、moonshot、qwen、zhipu、glm、minimax、doubao、baichuan、stepfun…）→ 官方；provider id 带 `custom-` / `relay-` / `proxy-` / `mirror-` / `cnkey` / `oneapi` / `newapi` / `modlens-` 前缀，或名称含「中转 / 自定义 / 第三方 / 代理」→ 其他来源；**识别不出来的一律归「其他来源」**，行内仍显示原始 `provider · model`。
 - 空组显示一行不可点说明（「这一组暂时没有模型」），三组都非空，1.5.1 修掉的「暂无数据」不会回归。
 - 自测 151 → 159 项（官方/中转/第三方混排的归属与顺序、空组说明行、「会话默认模型」仍在首位）。
+- README 设置章节换成 1.5.2 真机截图（预设 / 长度 / 模型 / 其他四张，只裁掉系统状态栏），补写项目介绍。
 
 ## 1.5.1 — 修复「模型」页显示「暂无数据」
 

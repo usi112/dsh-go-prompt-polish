@@ -1,6 +1,6 @@
 # ✦ One line in, a real prompt out · Prompt Polish
 
-![version](https://img.shields.io/badge/version-1.5.0-4d6bfe)
+![version](https://img.shields.io/badge/version-1.5.2-4d6bfe)
 ![platform](https://img.shields.io/badge/platform-dsh--go%20%C2%B7%20Android-3ddc84)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 
@@ -48,11 +48,11 @@ Post-processing strips a leading restatement of the draft; a pure echo is treate
 
 ![settings page · presets](docs/preview/settings-presets.jpg)
 
-On-device screenshot (app 1.0.15) · 1.4.0 · system status bar cropped, model and workspace names blurred
+On-device screenshot (app 1.0.15) · 1.5.2 · only the system status bar was cropped
 
-| Length tab | More tab |
-|---|---|
-| ![length](docs/preview/settings-length.jpg) | ![more](docs/preview/settings-other.jpg) |
+| Length | Model | More |
+|---|---|---|
+| ![length](docs/preview/settings-length.jpg) | ![model](docs/preview/settings-model.jpg) | ![more](docs/preview/settings-other.jpg) |
 
 Mock-up, not a real device screenshot · 1.4.0
 
@@ -79,7 +79,7 @@ Field-by-field detail, the three tiers and the v1 fallback page: [docs/settings.
 ```sh
 mkdir -p "$DSH_HOME/dsh-go/plugins"
 curl -L -o /tmp/p.tgz \
-  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.5.0/local-prompt-polish-1.5.0.tgz
+  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.5.2/local-prompt-polish-1.5.2.tgz
 tar xzf /tmp/p.tgz -C "$DSH_HOME/dsh-go/plugins/"
 dsh plugin --profile web add "$DSH_HOME/dsh-go/plugins/local-prompt-polish"
 ```

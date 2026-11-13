@@ -1,17 +1,23 @@
 # ✦ 一句话 → 好提示词 · Prompt Polish
 
-![version](https://img.shields.io/badge/version-1.5.0-4d6bfe)
+![version](https://img.shields.io/badge/version-1.5.2-4d6bfe)
 ![platform](https://img.shields.io/badge/platform-dsh--go%20%C2%B7%20Android-3ddc84)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 [![check](https://github.com/usi112/dsh-go-prompt-polish/actions/workflows/check.yml/badge.svg)](https://github.com/usi112/dsh-go-prompt-polish/actions/workflows/check.yml)
 
-**dsh-go 输入框上方的「✦ 优化提示词」胶囊**：草稿写完别急着发，点一下——**当前会话自己的模型**把它重写成一条更清晰的提示词。确认页先给你看全文，复制还是追加，你说了算。
+**dsh-go 输入框上方的「✦ 优化提示词」胶囊**：草稿写完别急着发，点一下——当前会话的模型（或你指定的模型）把它重写成一条更清晰的提示词：目标、背景、要求、交付形式一次补齐。确认页先给你看全文，复制还是追加，你说了算。
 
 不发送消息 · 不改对话内容 · 不额外联网（只走你已配置的模型）
 
-> 仓库 `dsh-go-prompt-polish` · 插件包名 `local-prompt-polish`（安装目录用这个名字）
+**1.5.2 能做什么**
 
-1.5.0 的设置页有 **9 套内置预设**（写代码 / 代码审查 / 排障 / 写文档 / 写作润色 / 数据与 SQL / 需求与产品 / 学习讲解 + 默认）、长度三档、固定模型与其他开关，全部落在插件目录的 `.config.json`；什么都不配时行为和 1.3.0 一样。
+- **9 套场景预设**：默认、写代码、代码审查、排障、写文档、写作润色、数据与 SQL、需求与产品、学习讲解。每套都能改内容、能设为默认、能一键恢复出厂；内置的名字和 id 不会被改坏。
+- **长度三档**：详细（2–3 倍、≤800 字）/ 中等（≤3 倍、≤600 字，与 1.3.0 逐字一致）/ 简易（≤草稿长度、≤200 字），档位同时决定提示词措辞与输出上限。
+- **模型按来源分组**：会话默认 / 官方模型 / 其他来源（中转、第三方、识别不出的都归这里），可以点选，也可以手填 provider + model；不改这里就跟随当前会话的模型。
+- **其他开关**：胶囊总开关、保留专有名词、保留代码与路径、确认页显示改写说明、附加指令（≤500 字）。
+- 所有设置写在插件目录的 `.config.json`（原子写、`gitignore`），**什么都不配时行为和 1.3.0 一样**。
+
+> 仓库 `dsh-go-prompt-polish` · 插件包名 `local-prompt-polish`（安装目录用这个名字）
 
 ![确认页（真机截图）：原文 / 优化稿 / 三个按钮](docs/preview/confirm.jpg)
 
@@ -88,11 +94,11 @@ dsh-go 原生插件的 effect 白名单只有 `insert` / `copy` / `toast` / `com
 
 ![设置页 · 预设](docs/preview/settings-presets.jpg)
 
-真机截图（App 1.0.15）· 1.4.0；1.5.0 在此页基础上多了「模型」tab（改法见下表）
+真机截图（App 1.0.15）· 1.5.2 · 只裁掉了系统状态栏
 
-| 长度 tab | 其他 tab |
-|---|---|
-| ![长度](docs/preview/settings-length.jpg) | ![其他](docs/preview/settings-other.jpg) |
+| 长度 | 模型 | 其他 |
+|---|---|---|
+| ![长度](docs/preview/settings-length.jpg) | ![模型](docs/preview/settings-model.jpg) | ![其他](docs/preview/settings-other.jpg) |
 
 三条路都到同一个面板 `polish-settings`：
 
@@ -134,7 +140,7 @@ dsh-go 原生插件的 effect 白名单只有 `insert` / `copy` / `toast` / `com
 # 1) 放进插件目录
 mkdir -p "$DSH_HOME/dsh-go/plugins"
 curl -L -o /tmp/p.tgz \
-  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.5.0/local-prompt-polish-1.5.0.tgz
+  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.5.2/local-prompt-polish-1.5.2.tgz
 tar xzf /tmp/p.tgz -C "$DSH_HOME/dsh-go/plugins/"
 
 # 2) 注册进当前 profile（手机本机引擎是 web）
