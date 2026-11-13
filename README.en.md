@@ -1,6 +1,6 @@
 # local-prompt-polish
 
-![version](https://img.shields.io/badge/version-1.3.0-4d6bfe)
+![version](https://img.shields.io/badge/version-1.4.0-4d6bfe)
 ![platform](https://img.shields.io/badge/platform-dsh--go%20%C2%B7%20Android-3ddc84)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 
@@ -42,12 +42,36 @@ Post-processing strips a leading restatement of the draft; a pure echo is treate
 - Context: the last 8 user/assistant messages of the same session, 320 chars each, ≤ 1600 chars total.
 - Route: current session model → last logged `request/header` → deployment default. If none, the local pass runs with no network call.
 
+## Settings
+
+![settings page (mock-up)](docs/preview/settings.png)
+
+Mock-up, not a real device screenshot · 1.4.0
+
+Three ways into the same panel (`polish-settings`):
+
+- **+** above the composer → "Setup";
+- session details → plugins → "Polish settings";
+- tapping the capsule while it is disabled: the toast explains it and the settings page opens.
+
+Each tab changes one thing; every default together is exactly the 1.3.0 behaviour:
+
+| Tab | What it does | Config fields | Default |
+|---|---|---|---|
+| Presets | appends a fixed requirement to the rewrite (e.g. "list acceptance criteria first"); the built-in Default cannot be renamed or removed | `presetId`, `presets[]` | only the built-in Default, empty instruction |
+| Length | Detailed / Medium / Short; sets both the length rule in the system prompt and the output cap | `length` | `medium` (verbatim 1.3.0) |
+| More | master switch, the two keep switches, rewrite notes, extra instruction | `enabled`, `keepTerms`, `keepCode`, `showNotes`, `allowExtra`, `extra` | switches on, `showNotes` off, `extra` empty |
+
+The save result appears in the **callout at the top of the page** ("Saved · 21:12", or a failure/validation message); before the first save it reads "Nothing saved yet — defaults are in use". A successful save writes `.config.json` immediately, so the next tap uses the new settings — **no engine restart**.
+
+Field-by-field detail, the three tiers and the v1 fallback page: [docs/settings.md](docs/settings.md) (Chinese).
+
 ## Install
 
 ```sh
 mkdir -p "$DSH_HOME/dsh-go/plugins"
 curl -L -o /tmp/p.tgz \
-  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.3.0/local-prompt-polish-1.3.0.tgz
+  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.4.0/local-prompt-polish-1.4.0.tgz
 tar xzf /tmp/p.tgz -C "$DSH_HOME/dsh-go/plugins/"
 dsh plugin --profile web add "$DSH_HOME/dsh-go/plugins/local-prompt-polish"
 ```
@@ -58,8 +82,30 @@ Requires dsh ≥ 0.2.1-rc.2 and app ≥ 1.0.11 (native plugin protocol v1). Code
 
 ```sh
 node --check lib/index.js && node --check lib/polish.js
-node test/selftest.mjs          # 47 assertions
-node "$DSH_HOME/skills/dsh-go-plugin/kit/bin/check.mjs" . --load   # 1 capsule · 1 panel
+node test/selftest.mjs          # 129 assertions
+node "$DSH_HOME/skills/dsh-go-plugin/kit/bin/check.mjs" . --load   # 1 capsule · 2 panels · 1 composer tool
+```
+
+## Project layout
+
+```
+local-prompt-polish/
+├── package.json          # manifest: capsule + two panels + composer tool
+├── cordis.patch.yml      # profile registration
+├── lib/
+│   ├── index.js          # capsule handler, confirm page, rewrite notes
+│   ├── config.js         # config read/write: defaults, normalize, raw-text cache, atomic write, presets
+│   ├── settings.js       # settings panel polish-settings: v2 form / v1 fallback, 9 actions
+│   ├── polish.js         # routing, context, rewrite, echo strip, length tiers, local fallback
+│   └── log.js            # append-only .log.jsonl (lengths and states only)
+├── test/selftest.mjs     # 129 assertions
+├── docs/
+│   ├── architecture.md   # how it works and its limits
+│   ├── settings.md       # settings fields and page structure
+│   └── preview/          # mock-ups: capsule / confirm / paste / settings
+├── .config.json          # created at runtime, gitignored
+├── .log.jsonl            # created at runtime, gitignored
+└── market-entry.json     # marketplace entry
 ```
 
 ## License

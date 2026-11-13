@@ -1,8 +1,8 @@
 {
   "name": "local-prompt-polish",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
-  "description": "输入框上方的「优化提示词」胶囊：弹出确认页完整预览，复制后全选粘贴即可整体替换；也可显式追加",
+  "description": "输入框上方的「优化提示词」胶囊 + 设置页：预设、输出长度档与其他开关写入配置文件，确认页预览后复制或追加",
   "type": "module",
   "main": "lib/index.js",
   "files": [
@@ -52,6 +52,29 @@
             "chat.panel",
             "session.tab"
           ]
+        },
+        {
+          "id": "polish-settings",
+          "title": {
+            "zh": "提示词优化设置",
+            "en": "Polish settings"
+          },
+          "icon": "settings",
+          "placement": [
+            "session.tab",
+            "features"
+          ]
+        }
+      ],
+      "composer.tools": [
+        {
+          "id": "open-settings",
+          "label": {
+            "zh": "优化设置",
+            "en": "Setup"
+          },
+          "icon": "settings",
+          "panel": "polish-settings"
         }
       ]
     }

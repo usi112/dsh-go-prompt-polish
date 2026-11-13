@@ -1,6 +1,6 @@
 # local-prompt-polish
 
-![version](https://img.shields.io/badge/version-1.3.0-4d6bfe)
+![version](https://img.shields.io/badge/version-1.4.0-4d6bfe)
 ![platform](https://img.shields.io/badge/platform-dsh--go%20%C2%B7%20Android-3ddc84)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 [![check](https://github.com/usi112/dsh-go-prompt-polish/actions/workflows/check.yml/badge.svg)](https://github.com/usi112/dsh-go-prompt-polish/actions/workflows/check.yml)
@@ -8,6 +8,8 @@
 **dsh-go 输入框上方的「✦ 优化提示词」胶囊**：点一下，用**当前会话自己的模型**把草稿改写成一条更清晰的提示词，先在确认页里完整预览，再由你决定怎么落到输入框。
 
 不发送消息 · 不改对话内容 · 不额外联网（只走你已配置的模型）
+
+1.4.0 加了[设置页](#设置)：预设、长度三档、其他开关，全部落在插件目录的 `.config.json`；什么都不配时行为和 1.3.0 一样。
 
 ![确认页（真机截图）：原文 / 优化稿 / 三个按钮](docs/preview/confirm.jpg)
 
@@ -20,6 +22,7 @@
 - [为什么没有「一键替换」](#为什么没有一键替换)
 - [改写质量：不是续写](#改写质量不是续写)
 - [上下文与模型路由](#上下文与模型路由)
+- [设置](#设置)
 - [安装](#安装)
 - [兼容性](#兼容性)
 - [自测](#自测)
@@ -79,13 +82,40 @@ dsh-go 原生插件的 effect 白名单只有 `insert` / `copy` / `toast` / `com
 - **上下文**：同一会话最近 8 条 user/assistant 文本，每条截 320 字，总量 ≤ 1600 字。
 - **路由**：当前会话的模型 → 该会话日志里最后一次 `request/header` → 部署默认模型。三级都拿不到，就走本地整理，不发网络请求。
 
+## 设置
+
+![设置页（示意图）](docs/preview/settings.png)
+
+界面示意图（非真机截图） · 1.4.0
+
+三条路都到同一个面板 `polish-settings`：
+
+- 输入框上方的 **+** → 「优化设置」；
+- 会话详情 → 插件 → 「提示词优化设置」；
+- **停用状态下点胶囊**：弹提示「「优化提示词」已在设置里停用 · 打开设置可重新启用」，同时直接打开设置页。
+
+三块各管一件事，默认值合起来就等于 1.3.0 的行为：
+
+| 块 | 管什么 | 写进配置的字段 | 默认 |
+|---|---|---|---|
+| 预设 | 给改写追加一段固定要求（例如「先列验收标准，不要客套」）；内置「默认」不能改名、不能删除 | `presetId`、`presets[]` | 只有内置「默认」，指令为空 |
+| 长度 | 详细 / 中等 / 简易三档，同时决定提示词里的篇幅要求和输出上限 | `length` | `medium`（与 1.3.0 逐字一致） |
+| 其他 | 胶囊总开关、两个「保留」开关、改写说明、附加指令 | `enabled`、`keepTerms`、`keepCode`、`showNotes`、`allowExtra`、`extra` | 开关全开、`showNotes` 关、`extra` 空 |
+
+保存结果显示在**页头那行 callout**：「已保存 · 21:12」，或者「写入配置失败，改动没有生效」/ 校验提示（名称不能为空、档位无效、内置预设不能改内容、这已经是默认预设、自定义预设最多 12 个、附加指令超过 500 字…）；一次都没保存过时显示「还没有保存过，当前用的是默认值」。没有改动时不会凭空生成配置文件。
+
+- 保存成功 = 当场写进 `.config.json`，下一次点胶囊就按新设置改写，**不用重启引擎**。
+- 打开「确认页显示改写说明」后，确认页会多一块：来源 · 档位 · 预设 · 专有名词 · 代码与路径 · 字数变化。
+- 三档的具体字数上限、每张表单的按钮与 action 名、v1 降级页长什么样：见 [docs/settings.md](docs/settings.md)。
+- 「一键替换」的限制没有变化：设置只改提示词，不改 effect 白名单。
+
 ## 安装
 
 ```sh
 # 1) 放进插件目录
 mkdir -p "$DSH_HOME/dsh-go/plugins"
 curl -L -o /tmp/p.tgz \
-  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.3.0/local-prompt-polish-1.3.0.tgz
+  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.4.0/local-prompt-polish-1.4.0.tgz
 tar xzf /tmp/p.tgz -C "$DSH_HOME/dsh-go/plugins/"
 
 # 2) 注册进当前 profile（手机本机引擎是 web）
@@ -105,23 +135,27 @@ dsh plugin --profile web add "$DSH_HOME/dsh-go/plugins/local-prompt-polish"
 | dsh 0.2.2-rc.1 · App 1.0.15 · Android 16 | 已实测（胶囊 + 确认页 + 复制/追加/取消） |
 | 生成回复进行中 | 胶囊会收起（App 行为），回复结束后可点 |
 | 没有可用模型 | 立即返回本地整理稿，不弹等待 |
+| 旧 App（`caps.components` 不含表单组件） | 设置页降级为 v1 摘要页：只显示当前值 + 「切换长度档」「开/关胶囊」两个按钮，配置照样能改 |
+| 设置页（1.4.0） | 用 dsh-go 检查器 + 测试宿主验证：8 个视图可画、表单 submit 的 `patch + toast`、9 个 action、v1 降级、写失败不落盘；**真机界面要重启引擎加载新 `lib/` 后自测** |
 | 老版本 App（无 panels 能力） | 确认页不出现，插件会退化——建议升级 App |
 
 ## 自测
 
 ```sh
 node --check lib/index.js && node --check lib/polish.js
-node test/selftest.mjs        # 47 项断言
+node test/selftest.mjs        # 129 项断言
 ```
 
 插件检查器（需要本机装了 dsh-go 的 skill kit）：
 
 ```sh
 node "$DSH_HOME/skills/dsh-go-plugin/kit/bin/check.mjs" . --load
-# → 胶囊 1 · 面板 1；zh/en × chat.panel/session.tab 四个视图都能画
+# → 胶囊 1 · 面板 2 · 加号工具 1；zh/en × chat.panel/session.tab/features 八个视图都能画
 ```
 
 自测覆盖：空/过短草稿、只开确认页不改输入框、loading→ready、复制不写回、追加显式写回、取消零写回、无模型立即出本地稿、模型抛错仍有稿，以及用 bridge 自己的 `effects.js` 校验 `open/insert/copy/toast` 形状。
+
+1.4.0 另加设置侧断言：配置缺文件=全默认、脏值逐项回落、同一 mtime 粒度内的同尺寸外部写入也能读到新值（缓存按原文比对）、预设增改删与「设为默认」、内置预设只读、长度三档（含 `simple` 的 500 字上限与 5 条上限）、`systemPrompt` 的第 8 条预设与第 9 条附加指令、`showNotes` 控制确认页的改写说明块、停用分支的两个效果、旧 App 的 v1 摘要页、恢复默认。
 
 ## 常见问题
 
@@ -135,18 +169,31 @@ node "$DSH_HOME/skills/dsh-go-plugin/kit/bin/check.mjs" . --load
 
 **重启引擎后胶囊没了？** 检查 `dsh plugin --profile web list` 里还有没有 `local-prompt-polish`，以及插件目录是否被删。
 
+**为什么改了设置没生效？** 两个常见原因：一是改的是 `lib/` 里的代码 —— 那要 App「设置 → 引擎 → 重启引擎」；二是确认页已经开着 —— 档位、预设、附加指令都要等下一次点胶囊才用上，重开确认页即可。配置文件本身每次点胶囊都会重读（读一遍文件原文和上次比对，相同就复用解析结果），手改 `.config.json` 不用重启。
+
+**配置存在哪、怎么备份或恢复默认？** 插件目录下的 `.config.json`，和 `.log.jsonl` 同一个目录（`$DSH_HOME/dsh-go/plugins/local-prompt-polish/`）。拷走这个文件就是备份，拷回来就是恢复；恢复默认在设置页「其他 → 恢复默认设置」，确认后整份写回默认值，自定义预设一起清掉。
+
+**停用后胶囊怎么回来？** 设置页 → 其他 → 打开「启用「优化提示词」胶囊」→ 保存。停用状态下点胶囊，被提示的同时就会打开设置页，从那里也能直接开回来。
+
 ## 目录结构
 
 ```
 local-prompt-polish/
-├── package.json          # dshGo 清单：composer.actions 胶囊 + panels 确认页
+├── package.json          # dshGo 清单：胶囊 + 两个面板 + 加号工具
 ├── cordis.patch.yml      # 注册进 profile
 ├── lib/
-│   ├── index.js          # 胶囊处理、确认页数据/动作、诊断日志
-│   └── polish.js         # 路由解析、上下文抽取、模型改写、复述检测、本地兜底
-├── test/selftest.mjs     # 47 项断言
-├── docs/architecture.md  # 原理与边界
-├── docs/preview/         # 界面示意图
+│   ├── index.js          # 胶囊处理、确认页数据/动作、改写说明
+│   ├── config.js         # 配置读写：默认值、normalize、原文比对缓存、原子写、预设
+│   ├── settings.js       # 设置面板 polish-settings：v2 表单 / v1 降级、9 个 action
+│   ├── polish.js         # 路由解析、上下文抽取、模型改写、复述检测、长度档、本地兜底
+│   └── log.js            # .log.jsonl 追加写（只记长度与状态）
+├── test/selftest.mjs     # 129 项断言
+├── docs/
+│   ├── architecture.md   # 原理与边界
+│   ├── settings.md       # 设置项清单与页面结构
+│   └── preview/          # 界面示意图：capsule / confirm / paste / settings
+├── .config.json          # 运行时生成，已 gitignore
+├── .log.jsonl            # 运行时生成，已 gitignore
 └── market-entry.json     # 插件市场条目
 ```
 
