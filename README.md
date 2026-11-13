@@ -9,7 +9,7 @@
 
 不发送消息 · 不改对话内容 · 不额外联网（只走你已配置的模型）
 
-![确认页](docs/preview/confirm.png)
+![确认页（真机截图）：原文 / 优化稿 / 三个按钮](docs/preview/confirm.jpg)
 
 ---
 
@@ -35,7 +35,7 @@
 
 ## 交互
 
-![胶囊](docs/preview/capsule.png)
+![胶囊位置（示意图）](docs/preview/capsule.png)
 
 ```
 点胶囊 → 起优化任务（3 秒内返回）→ 打开确认页
@@ -50,7 +50,7 @@
 | 追加到输入框 | `insert` | App 的语义是合并，优化稿接在原文后面 |
 | 取消 | 仅提示 | 一个字都不动 |
 
-![复制后粘贴](docs/preview/paste.png)
+![复制后粘贴（示意图）](docs/preview/paste.png)
 
 - **预览**：原文与优化稿全文（≤1900 字）
 - **可编辑**：不能，面板只有文本组件；要改就在输入框里改
