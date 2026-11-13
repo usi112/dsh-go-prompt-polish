@@ -1,13 +1,15 @@
-# local-prompt-polish
+# ✦ 一句话 → 好提示词 · Prompt Polish
 
 ![version](https://img.shields.io/badge/version-1.4.0-4d6bfe)
 ![platform](https://img.shields.io/badge/platform-dsh--go%20%C2%B7%20Android-3ddc84)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 [![check](https://github.com/usi112/dsh-go-prompt-polish/actions/workflows/check.yml/badge.svg)](https://github.com/usi112/dsh-go-prompt-polish/actions/workflows/check.yml)
 
-**dsh-go 输入框上方的「✦ 优化提示词」胶囊**：点一下，用**当前会话自己的模型**把草稿改写成一条更清晰的提示词，先在确认页里完整预览，再由你决定怎么落到输入框。
+**dsh-go 输入框上方的「✦ 优化提示词」胶囊**：草稿写完别急着发，点一下——**当前会话自己的模型**把它重写成一条更清晰的提示词。确认页先给你看全文，复制还是追加，你说了算。
 
 不发送消息 · 不改对话内容 · 不额外联网（只走你已配置的模型）
+
+> 仓库 `dsh-go-prompt-polish` · 插件包名 `local-prompt-polish`（安装目录用这个名字）
 
 1.4.0 加了[设置页](#设置)：预设、长度三档、其他开关，全部落在插件目录的 `.config.json`；什么都不配时行为和 1.3.0 一样。
 

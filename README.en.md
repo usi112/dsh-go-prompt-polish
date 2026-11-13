@@ -1,12 +1,14 @@
-# local-prompt-polish
+# ✦ One line in, a real prompt out · Prompt Polish
 
 ![version](https://img.shields.io/badge/version-1.4.0-4d6bfe)
 ![platform](https://img.shields.io/badge/platform-dsh--go%20%C2%B7%20Android-3ddc84)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 
-A capsule above the composer in the **dsh-go** Android app: tap it, and the draft you are writing is rewritten by **the model of the current session** into a sharper prompt, shown in a confirmation sheet before anything reaches the input box.
+A capsule above the composer in the **dsh-go** Android app: don't send that rough draft yet — tap once and **the model of the current session** rewrites it into a sharper prompt, previewed in a confirmation sheet before anything reaches the input box.
 
 No message is sent · your conversation is not modified · no extra network calls (only the model you already configured).
+
+> Repository `dsh-go-prompt-polish` · plugin package `local-prompt-polish` (that is the install directory name).
 
 ![confirmation page (real device screenshot)](docs/preview/confirm.jpg)
 

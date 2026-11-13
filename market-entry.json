@@ -6,8 +6,8 @@
     "en": "Prompt polish"
   },
   "summary": {
-    "zh": "输入框上方的胶囊：按当前会话上下文把你正在写的草稿改写成更清晰的提示词，先在确认页完整预览，再由你选择复制、追加或取消。设置页可管理预设、切换详细/中等/简易三档长度，并配置保留专有名词、保留代码与路径、改写说明、附加指令与启停开关。不发送消息，不额外联网。",
-    "en": "A capsule above the composer: rewrites your draft with the current session’s context, previews it in a sheet, then lets you copy, append or cancel. A settings page manages presets, a three-tier length (detailed / medium / short) and switches for proper nouns, code and paths, rewrite notes, an extra instruction and the master switch. Nothing is sent; no extra network calls."
+    "zh": "点一下，把正在写的草稿变成清晰提示词：确认页先预览，复制或追加随你选。设置页可配预设、详细/中等/简易三档长度，以及保留专有名词、保留代码与路径、改写说明、附加指令与启停开关。不发送消息，不额外联网。",
+    "en": "Tap once: the draft you are writing becomes a sharper prompt, previewed before it touches the composer — copy or append, your call. A settings page holds presets, a three-tier length (detailed / medium / short) and switches for proper nouns, code and paths, rewrite notes, an extra instruction and the master switch. Nothing is sent; no extra network calls."
   },
   "category": "writing",
   "screenshots": [
