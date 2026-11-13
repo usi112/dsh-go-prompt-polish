@@ -48,7 +48,7 @@ Post-processing strips a leading restatement of the draft; a pure echo is treate
 
 ![settings page · presets](docs/preview/settings-presets.jpg)
 
-On-device screenshot (app 1.0.15) · 1.5.2 · only the system status bar was cropped
+On-device screenshot (app 1.0.15) · 1.5.3 · only the system status bar was cropped (the shot shows 1.5.2 UI; 1.5.3 adds a “Reload models” button)
 
 | Length | Model | More |
 |---|---|---|
