@@ -104,6 +104,17 @@ eq(
 )
 ok(/用户：上一轮的问题/.test(collectContext(fakeCtx({ log }), 's1')), 'context keeps the user turn')
 
+// 上下文长度可自由设置：条数与总字数都按配置走
+const longLog = Array.from({ length: 10 }, (_, i) => ({
+  type: 'user/message',
+  data: { content: [{ type: 'text', text: `第${i + 1}条：${'内容'.repeat(80)}` }] },
+}))
+const many = collectContext(fakeCtx({ log: longLog }), 's1', { messages: 3, chars: 8000 })
+eq(many.split('\n').length, 3, 'the context message count follows the setting')
+const short = collectContext(fakeCtx({ log: longLog }), 's1', { messages: 10, chars: 200 })
+ok(short.length <= 200, 'the context character budget follows the setting')
+eq(collectContext(fakeCtx({ log: longLog }), 's1').split('\n').length, 8, 'the default remains 8 messages')
+
 // ── capsule: guard rails, then open the confirm page ───────────────────────
 const offline = boot({ get: () => undefined })
 eq(offline.handler({ draft: '  ' }, { locale: 'zh-CN' }), { toast: '输入框里还没有内容' })
@@ -188,7 +199,7 @@ ok(!('message.actions' in pkg.dshGo.contributes), 'no leftover probe contributio
 // ── config: defaults, tolerance, presets ───────────────────────────────────
 eq(loadConfig().enabled, true, 'a missing config file means defaults')
 eq(loadConfig().length, DEFAULT_LENGTH, 'the default tier is medium')
-eq(polishOptions(defaults(), true), { length: 'medium', keepTerms: true, keepCode: true, preset: undefined, extra: undefined, model: undefined }, 'defaults mean the 1.3.0 prompt')
+eq(polishOptions(defaults(), true), { length: 'medium', keepTerms: true, keepCode: true, preset: undefined, extra: undefined, context: { messages: 8, chars: 1600 }, model: undefined }, 'defaults mean the 1.3.0 prompt')
 const dirty = normalize({ length: 'huge', presetId: 'nope', presets: [{ id: 'p1', name: '  ', instruction: 'x' }, { id: 'p2', name: '严谨', extra: 1 }], extra: 'y'.repeat(900) })
 eq(dirty.config.length, 'medium', 'an unknown tier falls back to medium')
 eq(dirty.config.presetId, 'default', 'an unknown preset id falls back to the built-in one')
@@ -204,6 +215,14 @@ ok(presetsOf(loadConfig()).some((preset) => preset.id === 'coding' && preset.ins
 eq(presetsOf(loadConfig()).at(-1).id, 'p9', 'custom presets follow the built-ins')
 eq(presetName(presetsOf(defaults())[0], false), 'Default', 'the built-in preset name is localised')
 ok(newPreset(defaults(), true).id === 'p1', 'the first new preset gets id p1')
+
+// 上下文设置：自由填，越界回落
+eq([defaults().contextMessages, defaults().contextChars], [8, 1600], 'context defaults match 1.3.0')
+eq(normalize({ contextMessages: 0 }).config.contextMessages, 1, 'context messages clamp low')
+eq(normalize({ contextMessages: 999 }).config.contextMessages, 32, 'context messages clamp high')
+eq(normalize({ contextChars: 10 }).config.contextChars, 200, 'context chars clamp low')
+eq(normalize({ contextChars: 99999 }).config.contextChars, 8000, 'context chars clamp high')
+eq(normalize({ contextMessages: 5, contextChars: 2400 }).config.contextChars, 2400, 'free-form context sizes survive normalization')
 // 缓存按文件原文比对：同一 mtime 粒度内的同尺寸外部写入也必须读到新值。
 saveConfig({ ...defaults(), extra: 'AAAAA' })
 writeFileSync(configFile(), `${JSON.stringify({ ...defaults(), extra: 'BBBBB' })}\n`)
@@ -243,7 +262,7 @@ eq(systemPrompt(false, true), `${GOLDEN_EN}${STRICT_EN_LINE}`, 'the en strict re
 eq(systemPrompt(true, false, polishOptions(defaults(), true)), GOLDEN_ZH, 'polishOptions(defaults()) reproduces the 1.3.0 prompt')
 
 // ── length tiers ───────────────────────────────────────────────────────────
-ok(systemPrompt(true).includes('一般不超过草稿的 3 倍，绝不超过 600 字'), 'default prompt keeps the 1.3.0 length rule')
+ok(systemPrompt(true).includes('一般不超过草稿的 3 倍，绝不超过 600 字'), 'medium keeps the 1.3.0 length rule')
 ok(!systemPrompt(true).includes('预设要求') && !systemPrompt(true).includes('附加要求'), 'no preset or extra line by default')
 ok(systemPrompt(true, false, { length: 'detailed' }).includes('2–3 倍'), 'detailed widens the budget')
 ok(systemPrompt(true, false, { length: 'simple' }).includes('最多 200 字'), 'simple tightens the budget')
@@ -303,6 +322,24 @@ if (existsSync(kit)) {
   })
   const afterOther = JSON.parse(readFileSync(configFile(), 'utf8'))
   eq([afterOther.keepTerms, afterOther.showNotes, afterOther.extra], [false, true, '先给验收标准'], 'the switches and the extra instruction are stored')
+
+  const contextSave = await submit('saveOther', {
+    'data.form.enabled': true,
+    'data.form.keepTerms': true,
+    'data.form.keepCode': true,
+    'data.form.showNotes': false,
+    'data.form.allowExtra': true,
+    'data.form.contextMessages': 12,
+    'data.form.contextChars': 3200,
+    'data.form.extra': '先给验收标准',
+  })
+  eq(contextSave.issues, [], 'saving the context length produces no issues')
+  eq([JSON.parse(readFileSync(configFile(), 'utf8')).contextMessages, JSON.parse(readFileSync(configFile(), 'utf8')).contextChars], [12, 3200], 'the context length is stored')
+  const badContext = await submit('saveOther', {
+    'data.form.contextMessages': 40,
+    'data.form.contextChars': 3200,
+  })
+  ok(badContext.effects.some((effect) => effect.type === 'toast' && effect.text.includes('1–32')), 'an out-of-range message count is refused')
 
   const tooLong = await submit('saveOther', {
     'data.form.enabled': true,

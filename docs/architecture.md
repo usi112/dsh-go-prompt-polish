@@ -75,7 +75,7 @@ settings action
   │    ├─ 合并 patch → normalize()（非法字段回落、超长 clip）
   │    ├─ 写 <file>.<pid>.tmp → renameSync(tmp, file)
   │    └─ 刷新缓存，返回 { ok: true, config } 或 { ok: false, config, error }
-  ├─ mark('saved' | 'failed' | 'name' | 'length' | 'locked' | 'limit' | 'gone' | 'already' | 'overlength')
+  ├─ mark('saved' | 'failed' | 'name' | 'length' | 'limit' | 'gone' | 'already' | 'nochange' | 'tooLongPreset' | 'overlength' | 'context' | 'model' | 'builtinDelete' | 'restored')
   ├─ buildData() + publish()          ← 给所有开着的设置页推新数据
   └─ return { patch: data, toast }    ← patch 立即重画当前页
 ```

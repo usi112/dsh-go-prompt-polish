@@ -1,13 +1,13 @@
 {
   "name": "local-prompt-polish",
-  "version": "1.5.3",
+  "version": "1.6.0",
   "title": {
     "zh": "提示词优化",
     "en": "Prompt polish"
   },
   "summary": {
-    "zh": "点一下，把正在写的草稿变成清晰提示词：确认页先预览，复制或追加随你选。内置 9 套场景预设（写代码 / 代码审查 / 排障 / 写文档 / 写作润色 / 数据与 SQL / 需求与产品 / 学习讲解 / 默认），内容可改、可恢复；另有长度三档、固定模型与其他开关。不发送消息，不额外联网。",
-    "en": "Tap once: the draft you are writing becomes a sharper prompt, previewed before it touches the composer — copy or append, your call. Nine built-in scene presets (coding, review, debugging, docs, writing, data & SQL, product, learning, default) are all editable and restorable, plus three length tiers, a pinned model and extra switches. Nothing is sent; no extra network calls."
+    "zh": "点一下，把正在写的草稿变成清晰提示词：确认页先预览，复制、追加或「再来一版」随你选。9 套场景预设可改可恢复，长度三档，模型按来源分组；还能自由设置读取多少条上下文消息、总共多少字。不发送消息，不额外联网。",
+    "en": "Tap once: the draft you are writing becomes a sharper prompt, previewed before it touches the composer — copy, append or re-run. Nine editable scene presets, three length tiers, models grouped by source, and a free-form context budget (messages and characters). Nothing is sent; no extra network calls."
   },
   "category": "writing",
   "screenshots": [

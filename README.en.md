@@ -1,6 +1,6 @@
 # ✦ One line in, a real prompt out · Prompt Polish
 
-![version](https://img.shields.io/badge/version-1.5.3-4d6bfe)
+![version](https://img.shields.io/badge/version-1.6.0-4d6bfe)
 ![platform](https://img.shields.io/badge/platform-dsh--go%20%C2%B7%20Android-3ddc84)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 
@@ -79,7 +79,7 @@ Field-by-field detail, the three tiers and the v1 fallback page: [docs/settings.
 ```sh
 mkdir -p "$DSH_HOME/dsh-go/plugins"
 curl -L -o /tmp/p.tgz \
-  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.5.3/local-prompt-polish-1.5.3.tgz
+  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.6.0/local-prompt-polish-1.6.0.tgz
 tar xzf /tmp/p.tgz -C "$DSH_HOME/dsh-go/plugins/"
 dsh plugin --profile web add "$DSH_HOME/dsh-go/plugins/local-prompt-polish"
 ```
@@ -90,7 +90,7 @@ Requires dsh ≥ 0.2.1-rc.2 and app ≥ 1.0.11 (native plugin protocol v1). Code
 
 ```sh
 node --check lib/index.js && node --check lib/polish.js
-node test/selftest.mjs          # 179 assertions
+node test/selftest.mjs          # 191 assertions
 node "$DSH_HOME/skills/dsh-go-plugin/kit/bin/check.mjs" . --load   # 1 capsule · 2 panels · 1 composer tool
 ```
 
@@ -106,7 +106,7 @@ local-prompt-polish/
 │   ├── settings.js       # settings panel polish-settings: v2 form / v1 fallback, 9 actions
 │   ├── polish.js         # routing, context, rewrite, echo strip, length tiers, local fallback
 │   └── log.js            # append-only .log.jsonl (lengths and states only)
-├── test/selftest.mjs     # 179 assertions
+├── test/selftest.mjs     # 191 assertions
 ├── docs/
 │   ├── architecture.md   # how it works and its limits
 │   ├── settings.md       # settings fields and page structure

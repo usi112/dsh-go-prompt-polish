@@ -17,6 +17,8 @@
 | `length` | 枚举 `detailed` / `medium` / `simple` | `medium`（`DEFAULT_LENGTH`） | 输出长度档；非法值回落 `medium` | `polishOptions()` → `lib/polish.js → tierOf()`（`maxTokens` / `maxChars`）+ `systemPrompt()` 第 7 条 |
 | `presetId` | 字符串 | `default`（`DEFAULT_PRESET_ID`） | 当前选中的预设；指向不存在的 id 时回落内置「默认」 | `polishOptions()` → `activePreset()` → `systemPrompt()` 第 8 条 |
 | `presets[]` | 数组，元素 `{ id, instruction }`（内置）或 `{ id, name, instruction }`（自定义） | `[]` | 预设改动：**id 是 9 套内置之一 → 只认 instruction，等于改内置预设的内容**；其他 id → 自定义预设（最多 12 个，`name` ≤ 24 字且不能为空）。`instruction` ≤ 500 字；重复 id 只留第一条 | `presetsOf(config, zh)` → `polishOptions()` → `systemPrompt()` 第 8 条 |
+| `contextMessages` | 整数 | `8` | 读取最近多少条 user/assistant 消息做上下文，范围 1–32 | `polishOptions().context` → `lib/polish.js → collectContext()` |
+| `contextChars` | 整数 | `1600` | 上下文总字数上限，范围 200–8000 | 同上 |
 | `modelProvider` | 字符串 | `''`（跟随会话模型） | 固定使用的 provider id，例如 `deepseek` | `polishOptions().model` → `requestPolish()` 优先用它，否则 `resolveRoute()` 走会话模型 |
 | `modelModel` | 字符串 | `''` | 固定使用的 model id，例如 `deepseek-chat`；与 `modelProvider` 成对生效，只填一个按「跟随会话」处理 | 同上 |
 | `keepTerms` | 布尔 | `true` | 保留草稿里的专有名词 | `polishOptions()` → `systemPrompt()` 第 4 条（`keepRule()`） |
@@ -124,6 +126,9 @@ polish-settings（stack，标题「提示词优化设置」）
       │  ├─ toggle     保留代码、路径与标识符   bind data.form.keepCode
       │  ├─ toggle     确认页显示改写说明       bind data.form.showNotes
       │  ├─ toggle     允许使用附加指令         bind data.form.allowExtra
+      │  ├─ text        contextHint（默认 8 条 / 1600 字，条数 1–32、字数 200–8000）
+      │  ├─ number     读取最近几条消息         bind data.form.contextMessages（1–32）
+      │  ├─ number     上下文总字数上限         bind data.form.contextChars（200–8000，step 100）
       │  └─ textField  附加指令 bind data.form.extra，multiline，maxLines 4，maxLength 500
       ├─ divider
       ├─ text        resetHint（恢复默认会清空自定义预设）
@@ -149,6 +154,15 @@ action 一览（`lib/settings.js → SETTINGS_ACTIONS`）：
 | `toggleEnabled` | v1 降级页「开/关胶囊」 | `enabled` 取反 |
 
 **保存结果在页头 callout 里**：成功是绿色「已保存 · HH:MM」（带本地时间），写盘失败是「写入配置失败，改动没有生效」，其余是同一位置的警告文案（`预设名称不能为空` / `档位取值无效` / `内置预设不能删除，只能恢复默认内容` / `这已经是默认预设，没有要改的` / `自定义预设最多 12 个` / `这个预设已经不在了，请刷新` / `附加指令最多 500 字` / `provider 与 model 要一起填，或者都留空` / `内容没有变化，无需保存` / `预设名称或指令超出长度上限，请缩短后再保存` / `已重新读取模型`）；一次都没保存过时显示 `还没有保存过，当前用的是默认值`。每次保存后页面数据整体重推一遍（`publish()`），所以开关、档位、列表立刻跟着变，不用退出重进。v1 摘要页没有 callout 组件，同样的状态文案以一行普通文本显示在摘要下面。
+
+## 确认页的四个按钮
+
+| 按钮 | effect | 说明 |
+|---|---|---|
+| 复制优化稿 | `copy` | 只写剪贴板，不动输入框 |
+| 追加到输入框 | `insert` | App 侧是合并，原文留在前面 |
+| 再来一版（1.6.0） | 无（重跑任务） | 同一个草稿、同一套设置重新生成；期间页面显示「正在优化…」，旧结果不会被当成新结果 |
+| 取消 | `toast` | 一个字都不动 |
 
 ## 配置如何生效
 
@@ -248,6 +262,12 @@ lib/index.js → loadConfig()            ← 读文件原文；和上次读到�
 | 硬超时 | 适配器不理会 `AbortSignal` 时，45 秒后放弃并显示本地整理稿 + 「模型超时」提示 |
 | 保存元数据 | `v` 永远写回当前版本；手写的未知字段在保存时保留 |
 | 英文 toast | 全部 ≤ 40 字，避免被桥截断 |
+
+## 1.6.0：确认页重做与上下文预算
+
+- **再来一版**：确认页新增按钮，重新跑同一个草稿；任务 id 递增，旧结果返回时会被丢弃。
+- **上下文可自由设置**：`contextMessages`（1–32，默认 8）与 `contextChars`（200–8000，默认 1600）在设置页「其他」；越界整单拒绝并提示范围；默认值与 1.3.0 行为一致。
+- 长度档位没有变化：详细 / 中等（≤3 倍、≤600 字，硬上限 1900）/ 简易。
 
 ## 已知限制
 

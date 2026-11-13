@@ -1,6 +1,6 @@
 # ✦ 一句话 → 好提示词 · Prompt Polish
 
-![version](https://img.shields.io/badge/version-1.5.3-4d6bfe)
+![version](https://img.shields.io/badge/version-1.6.0-4d6bfe)
 ![platform](https://img.shields.io/badge/platform-dsh--go%20%C2%B7%20Android-3ddc84)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 [![check](https://github.com/usi112/dsh-go-prompt-polish/actions/workflows/check.yml/badge.svg)](https://github.com/usi112/dsh-go-prompt-polish/actions/workflows/check.yml)
@@ -9,14 +9,16 @@
 
 不发送消息 · 不改对话内容 · 不额外联网（只走你已配置的模型）
 
-**1.5.3 能做什么**
+**1.6.0 能做什么**
 
 - **9 套场景预设**：默认、写代码、代码审查、排障、写文档、写作润色、数据与 SQL、需求与产品、学习讲解。每套都能改内容、能设为默认、能一键恢复出厂；内置的名字和 id 不会被改坏。
 - **长度三档**：详细（2–3 倍、≤800 字）/ 中等（≤3 倍、≤600 字，与 1.3.0 逐字一致）/ 简易（≤草稿长度、≤200 字），档位同时决定提示词措辞与输出上限。
 - **模型按来源分组**：会话默认 / 官方模型 / 其他来源（中转、第三方、聚合平台、识别不出的都归这里），可以点选、可以手填 provider + model、也可以「重新读取模型」；不改这里就跟随当前会话的模型。
 - **其他开关**：胶囊总开关、保留专有名词、保留代码与路径、确认页显示改写说明、附加指令（≤500 字）。
 - 所有设置写在插件目录的 `.config.json`（原子写、`gitignore`），**什么都不配时行为和 1.3.0 一样**。
-- **1.5.3** 按外部审计修了一轮稳定性：模型列表 60 秒自动重试 +「重新读取模型」、大列表裁剪不越限、设置页按会话隔离、模型超时自动回落本地稿；模型页的说明行不再单独成列表，视图里任何列表都保证非空（空列表会被 App 画成「暂无数据」，有回归测试盯着）。
+- **确认页可「再来一版」**：不满意就重跑，同一个草稿、同一套设置；重跑时页面显示「正在优化…」。
+- **上下文可自由设置**：读几条最近消息、总共多少字（默认 8 条 / 1600 字，与 1.3.0 一致），范围 1–32 条、200–8000 字。
+- 1.5.3 的稳定性修复也在：模型列表 60 秒自动重试 +「重新读取模型」、大列表裁剪不越限、设置页按会话隔离、模型超时自动回落本地稿；视图里任何列表都保证非空（空列表会被 App 画成「暂无数据」，有回归测试盯着）。
 
 > 仓库 `dsh-go-prompt-polish` · 插件包名 `local-prompt-polish`（安装目录用这个名字）
 
@@ -53,13 +55,14 @@
 点胶囊 → 起优化任务（3 秒内返回）→ 打开确认页
    · 正在优化…
    · 就绪：原文 + 优化稿全文 + 三个按钮
-        [复制优化稿]（主）  [追加到输入框]  [取消]
+        [复制优化稿]（主）  [追加到输入框]  [再来一版]  [取消]
 ```
 
 | 按钮 | 效果 | 输入框 |
 |---|---|---|
 | **复制优化稿** | 只写剪贴板 | 不动；长按输入框 → 全选 → 粘贴 = 整体替换 |
 | 追加到输入框 | `insert` | App 的语义是合并，优化稿接在原文后面 |
+| 再来一版 | 重跑同一个草稿 | 不动；期间确认页显示「正在优化…」 |
 | 取消 | 仅提示 | 一个字都不动 |
 
 ![复制后粘贴（示意图）](docs/preview/paste.png)
@@ -141,7 +144,7 @@ dsh-go 原生插件的 effect 白名单只有 `insert` / `copy` / `toast` / `com
 # 1) 放进插件目录
 mkdir -p "$DSH_HOME/dsh-go/plugins"
 curl -L -o /tmp/p.tgz \
-  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.5.3/local-prompt-polish-1.5.3.tgz
+  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.6.0/local-prompt-polish-1.6.0.tgz
 tar xzf /tmp/p.tgz -C "$DSH_HOME/dsh-go/plugins/"
 
 # 2) 注册进当前 profile（手机本机引擎是 web）
@@ -169,7 +172,7 @@ dsh plugin --profile web add "$DSH_HOME/dsh-go/plugins/local-prompt-polish"
 
 ```sh
 node --check lib/index.js && node --check lib/polish.js
-node test/selftest.mjs        # 179 项断言
+node test/selftest.mjs        # 191 项断言
 ```
 
 插件检查器（需要本机装了 dsh-go 的 skill kit）：
@@ -217,7 +220,7 @@ local-prompt-polish/
 │   ├── settings.js       # 设置面板 polish-settings：v2 表单 / v1 降级、9 个 action
 │   ├── polish.js         # 路由解析、上下文抽取、模型改写、复述检测、长度档、本地兜底
 │   └── log.js            # .log.jsonl 追加写（只记长度与状态）
-├── test/selftest.mjs     # 179 项断言
+├── test/selftest.mjs     # 191 项断言
 ├── docs/
 │   ├── architecture.md   # 原理与边界
 │   ├── settings.md       # 设置项清单与页面结构
