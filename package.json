@@ -1,0 +1,59 @@
+{
+  "name": "local-prompt-polish",
+  "version": "1.3.0",
+  "private": true,
+  "description": "输入框上方的「优化提示词」胶囊：弹出确认页完整预览，复制后全选粘贴即可整体替换；也可显式追加",
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
+  },
+  "dshGo": {
+    "v": 1,
+    "title": {
+      "zh": "提示词优化",
+      "en": "Prompt polish"
+    },
+    "icon": "sparkle",
+    "wants": [
+      "draft"
+    ],
+    "contributes": {
+      "composer.actions": [
+        {
+          "id": "polish",
+          "label": {
+            "zh": "优化提示词",
+            "en": "Polish"
+          },
+          "icon": "sparkle"
+        }
+      ],
+      "panels": [
+        {
+          "id": "polish-panel",
+          "title": {
+            "zh": "优化提示词",
+            "en": "Polish prompt"
+          },
+          "icon": "sparkle",
+          "placement": [
+            "chat.panel",
+            "session.tab"
+          ]
+        }
+      ]
+    }
+  }
+}
