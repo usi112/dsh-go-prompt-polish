@@ -1,6 +1,6 @@
 # ✦ 一句话 → 好提示词 · Prompt Polish
 
-![version](https://img.shields.io/badge/version-1.4.0-4d6bfe)
+![version](https://img.shields.io/badge/version-1.5.0-4d6bfe)
 ![platform](https://img.shields.io/badge/platform-dsh--go%20%C2%B7%20Android-3ddc84)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 [![check](https://github.com/usi112/dsh-go-prompt-polish/actions/workflows/check.yml/badge.svg)](https://github.com/usi112/dsh-go-prompt-polish/actions/workflows/check.yml)
@@ -11,7 +11,7 @@
 
 > 仓库 `dsh-go-prompt-polish` · 插件包名 `local-prompt-polish`（安装目录用这个名字）
 
-1.4.0 加了[设置页](#设置)：预设、长度三档、其他开关，全部落在插件目录的 `.config.json`；什么都不配时行为和 1.3.0 一样。
+1.5.0 的设置页有 **9 套内置预设**（写代码 / 代码审查 / 排障 / 写文档 / 写作润色 / 数据与 SQL / 需求与产品 / 学习讲解 + 默认）、长度三档、固定模型与其他开关，全部落在插件目录的 `.config.json`；什么都不配时行为和 1.3.0 一样。
 
 ![确认页（真机截图）：原文 / 优化稿 / 三个按钮](docs/preview/confirm.jpg)
 
@@ -88,7 +88,7 @@ dsh-go 原生插件的 effect 白名单只有 `insert` / `copy` / `toast` / `com
 
 ![设置页 · 预设](docs/preview/settings-presets.jpg)
 
-真机截图（App 1.0.15）· 1.4.0 · 系统状态栏已裁掉、模型名与工作区名已模糊
+真机截图（App 1.0.15）· 1.4.0；1.5.0 在此页基础上多了「模型」tab（改法见下表）
 
 | 长度 tab | 其他 tab |
 |---|---|
@@ -100,13 +100,26 @@ dsh-go 原生插件的 effect 白名单只有 `insert` / `copy` / `toast` / `com
 - 会话详情 → 插件 → 「提示词优化设置」；
 - **停用状态下点胶囊**：弹提示「「优化提示词」已在设置里停用 · 打开设置可重新启用」，同时直接打开设置页。
 
-三块各管一件事，默认值合起来就等于 1.3.0 的行为：
+四块各管一件事，默认值合起来就等于 1.3.0 的行为：
 
 | 块 | 管什么 | 写进配置的字段 | 默认 |
 |---|---|---|---|
-| 预设 | 给改写追加一段固定要求（例如「先列验收标准，不要客套」）；内置「默认」不能改名、不能删除 | `presetId`、`presets[]` | 只有内置「默认」，指令为空 |
+| 预设 | 9 套场景模板，给改写追加一段固定要求；内置预设可改内容、不能改名或删除 | `presetId`、`presets[]` | 只有`默认`（无附加要求） |
 | 长度 | 详细 / 中等 / 简易三档，同时决定提示词里的篇幅要求和输出上限 | `length` | `medium`（与 1.3.0 逐字一致） |
+| 模型 | 固定一个本地已配置的模型，只影响「优化提示词」这一次改写 | `modelProvider`、`modelModel` | 空 = 跟随当前会话的模型 |
 | 其他 | 胶囊总开关、两个「保留」开关、改写说明、附加指令 | `enabled`、`keepTerms`、`keepCode`、`showNotes`、`allowExtra`、`extra` | 开关全开、`showNotes` 关、`extra` 空 |
+
+**9 套内置预设**（括号里是适用场景，均可在设置页改内容）：
+
+| 预设 | 场景 | 预设 | 场景 |
+|---|---|---|---|
+| 默认 | 通用改写 | 写文档 | README、使用说明 |
+| 写代码 | 新功能、改实现 | 写作润色 | 邮件、文案、汇报 |
+| 代码审查 | PR、片段审查 | 数据与 SQL | 查询、指标口径 |
+| 排障 | 报错、行为异常 | 需求与产品 | 用户故事、验收标准 |
+| 学习讲解 | 概念、原理入门 | | |
+
+点一行 → 改「预设指令」→ 保存，改动写进 `.config.json`（内置预设存成同 id 的覆盖条目）；「恢复此预设默认」只还当前这一套，「其他 → 恢复默认设置」会连自定义预设一起清掉。模型页可以点选宿主已配置的模型，也可以手填 provider / model（只填一个不保存）。
 
 保存结果显示在**页头那行 callout**：「已保存 · 21:12」，或者「写入配置失败，改动没有生效」/ 校验提示（名称不能为空、档位无效、内置预设不能改内容、这已经是默认预设、自定义预设最多 12 个、附加指令超过 500 字…）；一次都没保存过时显示「还没有保存过，当前用的是默认值」。没有改动时不会凭空生成配置文件。
 
@@ -121,7 +134,7 @@ dsh-go 原生插件的 effect 白名单只有 `insert` / `copy` / `toast` / `com
 # 1) 放进插件目录
 mkdir -p "$DSH_HOME/dsh-go/plugins"
 curl -L -o /tmp/p.tgz \
-  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.4.0/local-prompt-polish-1.4.0.tgz
+  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.5.0/local-prompt-polish-1.5.0.tgz
 tar xzf /tmp/p.tgz -C "$DSH_HOME/dsh-go/plugins/"
 
 # 2) 注册进当前 profile（手机本机引擎是 web）
@@ -149,7 +162,7 @@ dsh plugin --profile web add "$DSH_HOME/dsh-go/plugins/local-prompt-polish"
 
 ```sh
 node --check lib/index.js && node --check lib/polish.js
-node test/selftest.mjs        # 129 项断言
+node test/selftest.mjs        # 141 项断言
 ```
 
 插件检查器（需要本机装了 dsh-go 的 skill kit）：
@@ -193,7 +206,7 @@ local-prompt-polish/
 │   ├── settings.js       # 设置面板 polish-settings：v2 表单 / v1 降级、9 个 action
 │   ├── polish.js         # 路由解析、上下文抽取、模型改写、复述检测、长度档、本地兜底
 │   └── log.js            # .log.jsonl 追加写（只记长度与状态）
-├── test/selftest.mjs     # 129 项断言
+├── test/selftest.mjs     # 141 项断言
 ├── docs/
 │   ├── architecture.md   # 原理与边界
 │   ├── settings.md       # 设置项清单与页面结构

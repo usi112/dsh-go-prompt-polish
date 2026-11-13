@@ -21,7 +21,7 @@ import {
   resetConfig,
   saveConfig,
 } from '../lib/config.js'
-import { buildData, settingsView } from '../lib/settings.js'
+import { __setModelsForTest, buildData, settingsView } from '../lib/settings.js'
 import { LENGTH_TIERS, buildLocalPrompt, collectContext, resolveRoute, stripEcho, systemPrompt } from '../lib/polish.js'
 
 // Every config read in this run goes to a throwaway file, never the real one.
@@ -187,7 +187,7 @@ ok(!('message.actions' in pkg.dshGo.contributes), 'no leftover probe contributio
 // ── config: defaults, tolerance, presets ───────────────────────────────────
 eq(loadConfig().enabled, true, 'a missing config file means defaults')
 eq(loadConfig().length, DEFAULT_LENGTH, 'the default tier is medium')
-eq(polishOptions(defaults(), true), { length: 'medium', keepTerms: true, keepCode: true, preset: undefined, extra: undefined }, 'defaults mean the 1.3.0 prompt')
+eq(polishOptions(defaults(), true), { length: 'medium', keepTerms: true, keepCode: true, preset: undefined, extra: undefined, model: undefined }, 'defaults mean the 1.3.0 prompt')
 const dirty = normalize({ length: 'huge', presetId: 'nope', presets: [{ id: 'p1', name: '  ', instruction: 'x' }, { id: 'p2', name: '严谨', extra: 1 }], extra: 'y'.repeat(900) })
 eq(dirty.config.length, 'medium', 'an unknown tier falls back to medium')
 eq(dirty.config.presetId, 'default', 'an unknown preset id falls back to the built-in one')
@@ -198,7 +198,9 @@ const saved = saveConfig(withPreset)
 eq(saved.ok, true, 'saving writes the config file')
 eq(JSON.parse(readFileSync(configFile(), 'utf8')).presetId, 'p9', 'the default preset survives the round trip')
 eq(polishOptions(loadConfig(), true).preset, { name: '严谨', instruction: '先给验收标准' }, 'the chosen preset reaches the rewriter')
-eq(presetsOf(loadConfig()).map((preset) => preset.id), ['default', 'p9'], 'built-in default comes first')
+ok(presetsOf(loadConfig()).slice(0, 9).every((preset) => preset.builtin === true), 'the nine built-in presets come first')
+ok(presetsOf(loadConfig()).some((preset) => preset.id === 'coding' && preset.instruction !== ''), 'a built-in preset ships with its instruction')
+eq(presetsOf(loadConfig()).at(-1).id, 'p9', 'custom presets follow the built-ins')
 eq(presetName(presetsOf(defaults())[0], false), 'Default', 'the built-in preset name is localised')
 ok(newPreset(defaults(), true).id === 'p1', 'the first new preset gets id p1')
 // 缓存按文件原文比对：同一 mtime 粒度内的同尺寸外部写入也必须读到新值。
@@ -280,7 +282,7 @@ if (existsSync(kit)) {
   await feed.settled
   ok(feed.data.summary.startsWith('当前：'), 'the summary line is emitted')
   eq(feed.data.form.length, 'medium', 'the form starts on the default tier')
-  ok(feed.data.presets.length === 1, 'only the built-in preset exists at first')
+  ok(feed.data.presets.length === 9, 'nine built-in presets are listed at first')
 
   const submit = (action, values) => host.invoke('polish-settings', { action, value: { values }, locale: 'zh-CN' })
   const lengthSave = await submit('saveLength', { 'data.form.length': 'simple' })
@@ -343,14 +345,23 @@ if (existsSync(kit)) {
 
   const picked = await host.invoke('polish-settings', { action: 'presetEdit', locale: 'zh-CN', value: { id: DEFAULT_PRESET_ID } })
   eq(picked.issues, [], 'picking a preset produces no issues')
-  const lockedSave = await host.invoke('polish-settings', { action: 'presetSave', locale: 'zh-CN', value: { values: {
-    'data.form.presetName': '改名试试',
-    'data.form.presetInstruction': '不该写进去',
+  // 内置预设：内容可以改，名字改不动（nameLocked），保存后写成同 id 的覆盖条目
+  const builtinSave = await host.invoke('polish-settings', { action: 'presetSave', locale: 'zh-CN', value: { values: {
+    'data.form.presetInstruction': '先给一句话结论，再列三条依据',
     'data.form.makeDefault': false,
   } } })
-  eq(lockedSave.issues, [], 'the built-in preset save is a no-op, not an error')
-  ok(lockedSave.effects.some((effect) => effect.type === 'toast' && effect.text.includes('内置预设不能改内容')), 'the page explains that the built-in preset is read-only')
-  eq(JSON.parse(readFileSync(configFile(), 'utf8')).presets[0].name, '严谨', 'the built-in preset is read-only')
+  eq(builtinSave.issues, [], 'saving a built-in preset produces no issues')
+  const afterBuiltin = JSON.parse(readFileSync(configFile(), 'utf8'))
+  const builtinOverride = afterBuiltin.presets.find((item) => item.id === DEFAULT_PRESET_ID)
+  eq(builtinOverride, { id: DEFAULT_PRESET_ID, instruction: '先给一句话结论，再列三条依据' }, 'the built-in content is stored as an override entry')
+  let pageAfter = host.subscribe('polish-settings', {})
+  await pageAfter.settled
+  ok(pageAfter.data.presets[0].trailing.includes('已改'), 'an edited built-in preset is tagged')
+  pageAfter.stop()
+
+  const restored = await host.invoke('polish-settings', { action: 'presetRestore', locale: 'zh-CN', value: { confirmed: true } })
+  eq(restored.issues, [], 'restoring a preset produces no issues')
+  eq(JSON.parse(readFileSync(configFile(), 'utf8')).presets.some((item) => item.id === DEFAULT_PRESET_ID), false, 'restoring drops the built-in override')
 
   await host.invoke('polish-settings', { action: 'presetEdit', locale: 'zh-CN', value: { id: presetId } })
   const removed = await host.invoke('polish-settings', { action: 'presetDelete', locale: 'zh-CN', value: { confirmed: true } })
@@ -364,6 +375,23 @@ if (existsSync(kit)) {
   eq(loadConfig(), defaults(), 'restoring defaults clears every field')
   const cancelled = await host.invoke('polish-settings', { action: 'resetAll', locale: 'zh-CN', value: { confirmed: false } })
   eq(cancelled.effects.map((effect) => effect.type), ['patch'], 'cancelling a confirm only patches the page')
+
+  // 模型页：点选 / 手填 / 跟随会话
+  __setModelsForTest([{ provider: 'deepseek', id: 'deepseek-chat', name: 'DeepSeek Chat' }])
+  const modelFeed = host.subscribe('polish-settings', {})
+  await modelFeed.settled
+  ok(modelFeed.data.model.options.length === 1, 'the model list reaches the page')
+  eq(modelFeed.data.model.status, '跟随当前会话的模型', 'the model follows the session by default')
+  const pickedModel = await host.invoke('polish-settings', { action: 'modelPick', locale: 'zh-CN', value: { provider: 'deepseek', model: 'deepseek-chat' } })
+  eq(pickedModel.issues, [], 'picking a model produces no issues')
+  eq(JSON.parse(readFileSync(configFile(), 'utf8')).modelModel, 'deepseek-chat', 'the picked model is stored')
+  eq(polishOptions(loadConfig(), true).model, { provider: 'deepseek', model: 'deepseek-chat' }, 'the pinned model reaches the rewriter')
+  const halfPair = await host.invoke('polish-settings', { action: 'saveModel', locale: 'zh-CN', value: { values: { 'data.form.modelProvider': 'deepseek', 'data.form.modelModel': '' } } })
+  ok(halfPair.effects.some((effect) => effect.type === 'toast' && effect.text.includes('一起填')), 'a half-filled provider/model pair is refused')
+  const followed = await host.invoke('polish-settings', { action: 'modelFollow', locale: 'zh-CN' })
+  eq(followed.issues, [], 'following the session again produces no issues')
+  eq(JSON.parse(readFileSync(configFile(), 'utf8')).modelProvider, '', 'following the session clears the pinned model')
+  modelFeed.stop()
 
   const english = buildData(false)
   ok(english.summary.startsWith('Now：') || english.summary.startsWith('Now:'), 'the page follows the locale')
