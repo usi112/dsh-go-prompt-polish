@@ -161,7 +161,8 @@ dsh plugin --profile web add "$DSH_HOME/dsh-go/plugins/local-prompt-polish"
 
 | 组合 | 结果 |
 |---|---|
-| dsh 0.2.2-rc.1 · App 1.0.15 · Android 16 | 已实测（胶囊 + 确认页 + 复制/追加/取消） |
+| dsh 0.2.2-rc.1 · App **1.0.16** · Android 16 | 已实测（胶囊 + 确认页 + 复制/追加/取消）；1.0.16 未改插件 effect 白名单，行为与 1.0.15 一致 |
+| dsh 0.2.2-rc.1 · App 1.0.15 · Android 16 | 已实测（同上） |
 | 生成回复进行中 | 胶囊会收起（App 行为），回复结束后可点 |
 | 没有可用模型 | 立即返回本地整理稿，不弹等待 |
 | 旧 App（`caps.components` 不含表单组件） | 设置页降级为 v1 摘要页：只显示当前值 + 「切换长度档」「开/关胶囊」两个按钮，配置照样能改 |
