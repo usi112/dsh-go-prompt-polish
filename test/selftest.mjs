@@ -445,6 +445,32 @@ if (existsSync(kit)) {
   const resolvePath = (root, path) => path.split('.').slice(1).reduce((acc, key) => (acc === undefined || acc === null ? undefined : acc[key]), root)
   const missing = bindingPaths(settingsView({}, { locale: 'zh-CN' })).filter((path) => resolvePath(panelData, path) === undefined)
   eq(missing, [], 'every settings binding resolves against the panel data')
+
+  // 空数组的 list 会被 App 渲染成「暂无数据」：视图里每个 list 绑定都必须非空。
+  const listBindings = (() => {
+    const out = []
+    const walk = (node) => {
+      if (Array.isArray(node)) { node.forEach(walk); return }
+      if (node === null || typeof node !== 'object') return
+      if (node.type === 'list' && node.items && typeof node.items.$ === 'string') out.push(node.items.$)
+      for (const value of Object.values(node)) walk(value)
+    }
+    walk(settingsView({}, { locale: 'zh-CN' }))
+    return out
+  })()
+  const emptyLists = (data) => listBindings.filter((path) => {
+    const value = resolvePath(data, path)
+    return !Array.isArray(value) || value.length === 0
+  })
+  eq(emptyLists(buildData(true)), [], 'no list binding is empty in the default state')
+  __setModelsForTest([{ provider: 'deepseek-account', providerName: 'DeepSeek', id: 'deepseek-chat', name: 'DeepSeek Chat' }])
+  eq(emptyLists(buildData(true)), [], 'no list binding is empty with models')
+  saveConfig({ modelProvider: 'ghost-provider', modelModel: 'ghost-model' })
+  const ghost = buildData(true, 'pinnedGhost')
+  eq(emptyLists(ghost), [], 'no list binding is empty when the pinned model is missing')
+  eq(ghost.model.session.length, 2, 'the pinned-model note joins the session list instead of a new empty list')
+  ok(ghost.model.session[1].title.includes('已固定'), 'the pinned-model note is rendered')
+  saveConfig({ modelProvider: '', modelModel: '' })
   const missingV1 = bindingPaths(settingsView({}, { locale: 'zh-CN', components: [] })).filter((path) => resolvePath(panelData, path) === undefined)
   eq(missingV1, [], 'every fallback binding resolves too')
 

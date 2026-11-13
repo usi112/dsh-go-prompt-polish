@@ -16,7 +16,7 @@
 - **模型按来源分组**：会话默认 / 官方模型 / 其他来源（中转、第三方、聚合平台、识别不出的都归这里），可以点选、可以手填 provider + model、也可以「重新读取模型」；不改这里就跟随当前会话的模型。
 - **其他开关**：胶囊总开关、保留专有名词、保留代码与路径、确认页显示改写说明、附加指令（≤500 字）。
 - 所有设置写在插件目录的 `.config.json`（原子写、`gitignore`），**什么都不配时行为和 1.3.0 一样**。
-- **1.5.3** 按外部审计修了一轮稳定性：模型列表 60 秒自动重试 +「重新读取模型」、大列表裁剪不越限、设置页按会话隔离、模型超时自动回落本地稿。
+- **1.5.3** 按外部审计修了一轮稳定性：模型列表 60 秒自动重试 +「重新读取模型」、大列表裁剪不越限、设置页按会话隔离、模型超时自动回落本地稿；模型页的说明行不再单独成列表，视图里任何列表都保证非空（空列表会被 App 画成「暂无数据」，有回归测试盯着）。
 
 > 仓库 `dsh-go-prompt-polish` · 插件包名 `local-prompt-polish`（安装目录用这个名字）
 
@@ -169,7 +169,7 @@ dsh plugin --profile web add "$DSH_HOME/dsh-go/plugins/local-prompt-polish"
 
 ```sh
 node --check lib/index.js && node --check lib/polish.js
-node test/selftest.mjs        # 174 项断言
+node test/selftest.mjs        # 179 项断言
 ```
 
 插件检查器（需要本机装了 dsh-go 的 skill kit）：
@@ -195,7 +195,7 @@ node "$DSH_HOME/skills/dsh-go-plugin/kit/bin/check.mjs" . --load
 
 **模型列表一直是空的或旧的？** 1.5.3 起模型缓存只有 60 秒，空结果或读取失败会自动重试；模型页还有「重新读取模型」按钮。仍为空就检查宿主是否已经配置了模型服务。
 
-**模型页显示「暂无数据」？** 1.5.1 已修：状态行改成纯文本，列表第一条固定是「会话默认模型」，宿主没有可选模型时会多一行手填说明。升级后在 App「设置 → 引擎 → 重启引擎」一次即可。
+**模型页显示「暂无数据」？** 1.5.1 修过状态行与空列表，1.5.3 又修掉「固定模型说明行」这个新增的空列表；现在视图里每个列表都保证非空，并有回归测试盯着。升级后在 App「设置 → 引擎 → 重启引擎」一次即可。
 
 **重启引擎后胶囊没了？** 检查 `dsh plugin --profile web list` 里还有没有 `local-prompt-polish`，以及插件目录是否被删。
 
@@ -217,7 +217,7 @@ local-prompt-polish/
 │   ├── settings.js       # 设置面板 polish-settings：v2 表单 / v1 降级、9 个 action
 │   ├── polish.js         # 路由解析、上下文抽取、模型改写、复述检测、长度档、本地兜底
 │   └── log.js            # .log.jsonl 追加写（只记长度与状态）
-├── test/selftest.mjs     # 174 项断言
+├── test/selftest.mjs     # 179 项断言
 ├── docs/
 │   ├── architecture.md   # 原理与边界
 │   ├── settings.md       # 设置项清单与页面结构

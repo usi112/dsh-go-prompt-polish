@@ -107,8 +107,7 @@ polish-settings（stack，标题「提示词优化设置」）
    │  ├─ text        modelHint（默认跟随会话模型）
    │  ├─ text        data.modelStatus →「当前：跟随当前会话的模型 / provider · model」
    │  │             半对配置时追加「（配置不完整，按跟随会话处理）」
-   │  ├─ text · list 组「会话默认」→ data.model.session（1 行，action modelFollow）
-   │  ├─ list        data.model.pinned（固定模型不在宿主列表时的一行说明）
+   │  ├─ text · list 组「会话默认」→ data.model.session（1 行 action modelFollow；固定模型不在宿主列表时追加 1 行说明）
    │  ├─ text · list 组「官方模型」→ data.model.official（action modelPick）
    │  ├─ text · list 组「其他来源」→ data.model.others（action modelPick）
    │  │             每组最多 12 行；超出显示「还有 N 个，可在下方手填」；空组显示「这一组暂时没有模型」
@@ -243,6 +242,7 @@ lib/index.js → loadConfig()            ← 读文件原文；和上次读到�
 | 改动 | 说明 |
 |---|---|
 | 模型缓存带 TTL | 60 秒；空结果/读取失败不固化，面板重开会重试；模型页有「重新读取模型」 |
+| 列表永不为空 | 1.5.3 起视图里每个 `list` 绑定都保证非空（空数组会被 App 画成「暂无数据」）；固定模型的说明行并进「会话默认」列表，回归测试覆盖空/非空/固定缺失三种状态 |
 | 行数上限与裁剪 | 每组 12 行、组尾「还有 N 个」；模型名 60 字、`provider · model` 120 字；删除冗余 `data.model.options`，41 行场景的 patch 仍在 16 KiB 内 |
 | 按会话隔离 | 编辑目标与保存状态按 `sessionId` 分开；表单提交带 `data.form.presetId` |
 | 硬超时 | 适配器不理会 `AbortSignal` 时，45 秒后放弃并显示本地整理稿 + 「模型超时」提示 |

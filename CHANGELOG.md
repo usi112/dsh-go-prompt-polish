@@ -10,6 +10,10 @@
 - 设置页状态按会话隔离：`editingId` / `status` 从模块级单例改成按 `sessionId` 分开，表单提交带上 `data.form.presetId`，两个面板同时开不会再写错预设
 - 适配器不理会 `AbortSignal` 时：`startJob` 用 `Promise.race` 硬超时，超时立刻用本地整理稿并提示「模型超时」，确认页不再永久停在「正在优化…」
 
+**模型页「暂无数据」回归修复**
+- 1.5.3 给「固定的模型不在列表」加的一行说明原本是独立 `list`，没有固定模型时为空数组，App 会画成「暂无数据」；现在并进「会话默认」列表（`data.model.session` 第 2 行），视图里不再有会变空的 list
+- 新增回归护栏：扫描视图里每个 `list` 绑定，要求 `buildData()` 解析结果非空（无模型 / 有模型 / 固定模型缺失三种状态）
+
 **P3（审计清单）**
 - 聚合平台（openrouter / siliconflow / together / groq / poe / one-api…）归「其他来源」，不再算官方
 - 过滤空白 provider id / 空白模型名；`listProviders()` 返回 Map/Set 也能读
@@ -25,7 +29,7 @@
 - `showNotes` 在 loading 阶段显示「正在改写…」而不是空块
 - 文档：`docs/settings.md` 修正「内置默认不可改」等与实现不一致的表述
 
-- 自测 160 → 174 项（新增：TTL 重试、载荷裁剪与 16 KiB patch、双会话隔离、超长拒绝、重名、英文 toast 长度）
+- 自测 160 → 179 项（新增：TTL 重试、载荷裁剪与 16 KiB patch、双会话隔离、超长拒绝、重名、英文 toast 长度、空列表护栏、pinned 说明合并）
 
 ## 1.5.2 — 模型列表按来源分组
 
