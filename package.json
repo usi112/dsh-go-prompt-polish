@@ -1,6 +1,6 @@
 {
   "name": "local-prompt-polish",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "private": true,
   "description": "输入框上方的「优化提示词」胶囊：9 套场景预设 + 长度三档 + 本地固定模型，确认页先预览；配置写在本地 .config.json",
   "type": "module",

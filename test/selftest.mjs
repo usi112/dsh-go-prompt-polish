@@ -276,7 +276,7 @@ if (existsSync(kit)) {
   ok(flat.includes('"type":"form"') && flat.includes('"type":"toggle"'), 'the settings page uses v2 forms')
   const fallback = await host.view('polish-settings', {}, { locale: 'zh-CN', components: [] })
   ok(!JSON.stringify(fallback.view).includes('"type":"form"'), 'an old app gets the v1 fallback page')
-  ok(JSON.stringify(fallback.view).includes('keyValue'), 'the fallback still shows the current values')
+  ok(JSON.stringify(fallback.view).includes('data.overviewText'), 'the fallback still shows the current values')
 
   const feed = host.subscribe('polish-settings', {})
   await feed.settled
@@ -380,8 +380,11 @@ if (existsSync(kit)) {
   __setModelsForTest([{ provider: 'deepseek', id: 'deepseek-chat', name: 'DeepSeek Chat' }])
   const modelFeed = host.subscribe('polish-settings', {})
   await modelFeed.settled
-  ok(modelFeed.data.model.options.length === 1, 'the model list reaches the page')
+  ok(modelFeed.data.model.options.length === 2, 'the session row plus one host model are listed')
+  eq(modelFeed.data.model.options[0].title, '会话默认模型', 'the first row is always the session default model')
+  eq(modelFeed.data.model.options[0].action, 'modelFollow', 'the session row switches back to following the session')
   eq(modelFeed.data.model.status, '跟随当前会话的模型', 'the model follows the session by default')
+  ok(modelFeed.data.modelStatus.startsWith('当前：'), 'the status line is plain text, not a keyValue binding')
   const pickedModel = await host.invoke('polish-settings', { action: 'modelPick', locale: 'zh-CN', value: { provider: 'deepseek', model: 'deepseek-chat' } })
   eq(pickedModel.issues, [], 'picking a model produces no issues')
   eq(JSON.parse(readFileSync(configFile(), 'utf8')).modelModel, 'deepseek-chat', 'the picked model is stored')
@@ -391,7 +394,39 @@ if (existsSync(kit)) {
   const followed = await host.invoke('polish-settings', { action: 'modelFollow', locale: 'zh-CN' })
   eq(followed.issues, [], 'following the session again produces no issues')
   eq(JSON.parse(readFileSync(configFile(), 'utf8')).modelProvider, '', 'following the session clears the pinned model')
+
+  // 空模型列表：不能出现空数组（App 会画成「暂无数据」），而是一条会话默认模型 + 一条说明
+  __setModelsForTest([])
+  const emptyFeed = host.subscribe('polish-settings', {})
+  await emptyFeed.settled
+  const emptyRows = emptyFeed.data.model.options
+  ok(emptyRows.length === 2, 'an empty host model list still renders two rows')
+  eq(emptyRows[0].title, '会话默认模型', 'the session row survives an empty model list')
+  ok(emptyRows[1].title.includes('还没读到可选模型'), 'the empty case explains how to fill provider and model manually')
+  ok(emptyRows[1].action === undefined, 'the explanation row is not tappable')
+  const followedEmpty = await host.invoke('polish-settings', { action: 'modelFollow', locale: 'zh-CN' })
+  ok(followedEmpty.effects.some((effect) => effect.type === 'toast'), 'picking the session row from an empty list still answers')
+  emptyFeed.stop()
+  __setModelsForTest([{ provider: 'deepseek', id: 'deepseek-chat', name: 'DeepSeek Chat' }])
   modelFeed.stop()
+
+  // 视图里每一个 $ 绑定都必须能在面板数据里解析到，否则 App 会画「暂无数据」。
+  const bindingPaths = (node, out = []) => {
+    if (Array.isArray(node)) {
+      for (const item of node) bindingPaths(item, out)
+      return out
+    }
+    if (node === null || typeof node !== 'object') return out
+    if (typeof node.$ === 'string' && node.$.startsWith('data')) out.push(node.$)
+    for (const value of Object.values(node)) bindingPaths(value, out)
+    return out
+  }
+  const panelData = buildData(true)
+  const resolvePath = (root, path) => path.split('.').slice(1).reduce((acc, key) => (acc === undefined || acc === null ? undefined : acc[key]), root)
+  const missing = bindingPaths(settingsView({}, { locale: 'zh-CN' })).filter((path) => resolvePath(panelData, path) === undefined)
+  eq(missing, [], 'every settings binding resolves against the panel data')
+  const missingV1 = bindingPaths(settingsView({}, { locale: 'zh-CN', components: [] })).filter((path) => resolvePath(panelData, path) === undefined)
+  eq(missingV1, [], 'every fallback binding resolves too')
 
   const english = buildData(false)
   ok(english.summary.startsWith('Now：') || english.summary.startsWith('Now:'), 'the page follows the locale')

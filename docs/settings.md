@@ -105,8 +105,8 @@ polish-settings（stack，标题「提示词优化设置」）
    │  └─ list        data.tiers → 三档说明，当前档打 ✓
    ├─ tab 模型
    │  ├─ text        modelHint（默认跟随会话模型）
-   │  ├─ keyValue    data.modelPairs → 当前模型
-   │  ├─ list        data.model.options → 宿主可选模型，点一行即固定（action modelPick）
+   │  ├─ text        data.modelStatus →「当前：跟随当前会话的模型 / provider · model」
+   │  ├─ list        data.model.options → 第一行固定「会话默认模型」(action modelFollow)，其余是宿主可选模型（action modelPick）；列表为空时追加一行不可点说明
    │  ├─ form        submit: saveModel，按钮「保存模型」
    │  │  ├─ textField  provider bind data.form.modelProvider
    │  │  └─ textField  model    bind data.form.modelModel
@@ -222,6 +222,9 @@ lib/index.js → loadConfig()            ← 读文件原文；和上次读到�
 | 设置页可改 API / 模型 | 不做 API 地址与 Key；改为「固定本地模型」：`modelProvider` + `modelModel`，点选宿主模型或手填，空值跟随会话 |
 
 ## 已知限制
+
+- 模型页的状态行与 v1 摘要页都用**纯文本**绑定：App 1.0.15 会把 `keyValue` 绑定「数组的数组」渲染成「暂无数据」，1.5.1 起不再使用这种写法。
+- 宿主没有注册任何 provider 时，模型列表只有「会话默认模型」+ 一行手填说明；固定模型仍可通过手填 provider / model 保存。
 
 1. **`lib/` 改动要重启引擎**：设置页本身、`.config.json`、`package.json` 的改动都即时生效（清单自动重读、配置按原文比对重读），但 `lib/*.js` 是引擎启动时加载的，改完要在 App「设置 → 引擎 → 重启引擎」。
 2. **旧 App 只有 v1 摘要页**：`caps.components` 里缺 `form` / `textField` / `toggle` / `segmented` / `tabs` / `list` / `confirm` 任意一项，就只能看到当前值和「切换长度档」「开/关胶囊」两个按钮；预设管理、附加指令、改写说明都要新版 App。
