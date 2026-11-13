@@ -10,7 +10,7 @@ No message is sent · your conversation is not modified · no extra network call
 
 > Repository `dsh-go-prompt-polish` · plugin package `local-prompt-polish` (that is the install directory name).
 
-![confirmation page (real device screenshot)](docs/preview/confirm.jpg)
+![confirmation page (real device screenshot): draft, rewrite, and four buttons](docs/preview/confirm.jpg)
 
 ## What it does
 
@@ -48,7 +48,7 @@ Post-processing strips a leading restatement of the draft; a pure echo is treate
 
 ![settings page · presets](docs/preview/settings-presets.jpg)
 
-On-device screenshot (app 1.0.15) · 1.5.3 · only the system status bar was cropped (the shot shows 1.5.2 UI; 1.5.3 adds a “Reload models” button)
+On-device screenshot (app 1.0.15) · 1.6.0 · only the system status bar was cropped (preset/length/model shots come from 1.5.2–1.5.3 and are unchanged; “More” and the confirm page are 1.6.0)
 
 | Length | Model | More |
 |---|---|---|
