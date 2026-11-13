@@ -8,7 +8,7 @@ A capsule above the composer in the **dsh-go** Android app: tap it, and the draf
 
 No message is sent · your conversation is not modified · no extra network calls (only the model you already configured).
 
-![confirm sheet](docs/preview/confirm.png)
+![confirmation page (real device screenshot)](docs/preview/confirm.jpg)
 
 ## What it does
 
