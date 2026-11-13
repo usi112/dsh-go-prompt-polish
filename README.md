@@ -38,7 +38,7 @@
 
 ## 交互
 
-![胶囊位置（示意图）](docs/preview/capsule.png)
+![胶囊位置（真机截图）](docs/preview/capsule.jpg)
 
 ```
 点胶囊 → 起优化任务（3 秒内返回）→ 打开确认页
@@ -84,9 +84,13 @@ dsh-go 原生插件的 effect 白名单只有 `insert` / `copy` / `toast` / `com
 
 ## 设置
 
-![设置页（示意图）](docs/preview/settings.png)
+![设置页 · 预设](docs/preview/settings-presets.jpg)
 
-界面示意图（非真机截图） · 1.4.0
+真机截图（App 1.0.15）· 1.4.0 · 系统状态栏已裁掉、模型名与工作区名已模糊
+
+| 长度 tab | 其他 tab |
+|---|---|
+| ![长度](docs/preview/settings-length.jpg) | ![其他](docs/preview/settings-other.jpg) |
 
 三条路都到同一个面板 `polish-settings`：
 
@@ -136,7 +140,7 @@ dsh plugin --profile web add "$DSH_HOME/dsh-go/plugins/local-prompt-polish"
 | 生成回复进行中 | 胶囊会收起（App 行为），回复结束后可点 |
 | 没有可用模型 | 立即返回本地整理稿，不弹等待 |
 | 旧 App（`caps.components` 不含表单组件） | 设置页降级为 v1 摘要页：只显示当前值 + 「切换长度档」「开/关胶囊」两个按钮，配置照样能改 |
-| 设置页（1.4.0） | 用 dsh-go 检查器 + 测试宿主验证：8 个视图可画、表单 submit 的 `patch + toast`、9 个 action、v1 降级、写失败不落盘；**真机界面要重启引擎加载新 `lib/` 后自测** |
+| 设置页（1.4.0） | 已在 App 1.0.15 真机走通：预设 / 长度 / 其他三个 tab、保存结果 callout、开关与恢复默认（见 `docs/preview/settings-*.jpg`）；另有检查器 + 测试宿主覆盖 8 个视图、9 个 action、v1 降级、写失败不落盘 |
 | 老版本 App（无 panels 能力） | 确认页不出现，插件会退化——建议升级 App |
 
 ## 自测
@@ -191,7 +195,7 @@ local-prompt-polish/
 ├── docs/
 │   ├── architecture.md   # 原理与边界
 │   ├── settings.md       # 设置项清单与页面结构
-│   └── preview/          # 界面示意图：capsule / confirm / paste / settings
+│   └── preview/          # 真机截图：胶囊 / 设置页三 tab / 确认页；paste 仍是示意图
 ├── .config.json          # 运行时生成，已 gitignore
 ├── .log.jsonl            # 运行时生成，已 gitignore
 └── market-entry.json     # 插件市场条目

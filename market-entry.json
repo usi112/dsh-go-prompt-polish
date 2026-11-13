@@ -11,9 +11,11 @@
   },
   "category": "writing",
   "screenshots": [
-    "docs/preview/settings.png",
+    "docs/preview/settings-presets.jpg",
+    "docs/preview/settings-length.jpg",
+    "docs/preview/settings-other.jpg",
+    "docs/preview/capsule.jpg",
     "docs/preview/confirm.jpg",
-    "docs/preview/capsule.png",
     "docs/preview/paste.png"
   ],
   "homepage": "https://github.com/usi112/dsh-go-prompt-polish"

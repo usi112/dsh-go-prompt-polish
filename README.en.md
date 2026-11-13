@@ -44,7 +44,13 @@ Post-processing strips a leading restatement of the draft; a pure echo is treate
 
 ## Settings
 
-![settings page (mock-up)](docs/preview/settings.png)
+![settings page · presets](docs/preview/settings-presets.jpg)
+
+On-device screenshot (app 1.0.15) · 1.4.0 · system status bar cropped, model and workspace names blurred
+
+| Length tab | More tab |
+|---|---|
+| ![length](docs/preview/settings-length.jpg) | ![more](docs/preview/settings-other.jpg) |
 
 Mock-up, not a real device screenshot · 1.4.0
 
@@ -102,7 +108,7 @@ local-prompt-polish/
 ├── docs/
 │   ├── architecture.md   # how it works and its limits
 │   ├── settings.md       # settings fields and page structure
-│   └── preview/          # mock-ups: capsule / confirm / paste / settings
+│   └── preview/          # screenshots: capsule / settings tabs / confirm; paste is still a mock-up
 ├── .config.json          # created at runtime, gitignored
 ├── .log.jsonl            # created at runtime, gitignored
 └── market-entry.json     # marketplace entry
