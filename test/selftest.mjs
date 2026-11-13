@@ -380,9 +380,11 @@ if (existsSync(kit)) {
   __setModelsForTest([{ provider: 'deepseek', id: 'deepseek-chat', name: 'DeepSeek Chat' }])
   const modelFeed = host.subscribe('polish-settings', {})
   await modelFeed.settled
-  ok(modelFeed.data.model.options.length === 2, 'the session row plus one host model are listed')
-  eq(modelFeed.data.model.options[0].title, '会话默认模型', 'the first row is always the session default model')
-  eq(modelFeed.data.model.options[0].action, 'modelFollow', 'the session row switches back to following the session')
+  eq(modelFeed.data.model.session.length, 1, 'the session group always holds the session default row')
+  eq(modelFeed.data.model.session[0].title, '会话默认模型', 'the session row is the session default model')
+  eq(modelFeed.data.model.session[0].action, 'modelFollow', 'the session row switches back to following the session')
+  eq(modelFeed.data.model.official.length, 1, 'a deepseek provider lands in the official group')
+  ok(modelFeed.data.model.others.length === 1 && modelFeed.data.model.others[0].title === '这一组暂时没有模型', 'an empty group shows a plain explanation instead of an empty list')
   eq(modelFeed.data.model.status, '跟随当前会话的模型', 'the model follows the session by default')
   ok(modelFeed.data.modelStatus.startsWith('当前：'), 'the status line is plain text, not a keyValue binding')
   const pickedModel = await host.invoke('polish-settings', { action: 'modelPick', locale: 'zh-CN', value: { provider: 'deepseek', model: 'deepseek-chat' } })
@@ -395,15 +397,31 @@ if (existsSync(kit)) {
   eq(followed.issues, [], 'following the session again produces no issues')
   eq(JSON.parse(readFileSync(configFile(), 'utf8')).modelProvider, '', 'following the session clears the pinned model')
 
-  // 空模型列表：不能出现空数组（App 会画成「暂无数据」），而是一条会话默认模型 + 一条说明
+  // 按来源分组：官方 / 中转（custom-*）/ 第三方插件（modlens-*），组内保持宿主顺序
+  __setModelsForTest([
+    { provider: 'deepseek-account', providerName: 'DeepSeek', id: 'deepseek-chat', name: 'DeepSeek Chat' },
+    { provider: 'custom-cnkey', providerName: '中转站', id: 'glm-5.3-flash', name: 'glm-5.3-flash' },
+    { provider: 'custom-cnkey', providerName: '中转站', id: 'deepseek-v4.1-flash', name: 'deepseek-v4.1-flash' },
+    { provider: 'modlens-deepseek-account', providerName: 'modlens', id: 'deepseek-v4-pro', name: 'DeepSeek-V4-Pro (modlens vision)' },
+  ])
+  const groupedFeed = host.subscribe('polish-settings', {})
+  await groupedFeed.settled
+  eq(groupedFeed.data.model.official.map((row) => row.subtitle), ['deepseek-account · deepseek-chat'], 'official models stay in their own group')
+  eq(groupedFeed.data.model.others.map((row) => row.subtitle), ['custom-cnkey · glm-5.3-flash', 'custom-cnkey · deepseek-v4.1-flash', 'modlens-deepseek-account · deepseek-v4-pro'], 'relay and third-party models land in the other group, in host order')
+  eq(groupedFeed.data.model.officialCount, 1, 'the official count is reported')
+  eq(groupedFeed.data.model.otherCount, 3, 'the other-source count is reported')
+  ok(groupedFeed.data.model.session[0].title === '会话默认模型', 'the session row is still first')
+  groupedFeed.stop()
+
+  // 空模型列表：每组都非空（会话 1 行 + 两个说明行），不会画成「暂无数据」
   __setModelsForTest([])
   const emptyFeed = host.subscribe('polish-settings', {})
   await emptyFeed.settled
-  const emptyRows = emptyFeed.data.model.options
-  ok(emptyRows.length === 2, 'an empty host model list still renders two rows')
-  eq(emptyRows[0].title, '会话默认模型', 'the session row survives an empty model list')
-  ok(emptyRows[1].title.includes('还没读到可选模型'), 'the empty case explains how to fill provider and model manually')
-  ok(emptyRows[1].action === undefined, 'the explanation row is not tappable')
+  eq(emptyFeed.data.model.session.length, 1, 'the session group survives an empty host model list')
+  eq(emptyFeed.data.model.session[0].title, '会话默认模型', 'the session row still shows up')
+  ok(emptyFeed.data.model.official.length === 1 && emptyFeed.data.model.official[0].title === '这一组暂时没有模型', 'the empty official group shows an explanation row')
+  ok(emptyFeed.data.model.others.length === 1 && emptyFeed.data.model.others[0].action === undefined, 'the empty other group row is not tappable')
+  ok(emptyFeed.data.model.options.some((row) => row.title.includes('还没读到可选模型')), 'the manual-fill hint survives in the flat list')
   const followedEmpty = await host.invoke('polish-settings', { action: 'modelFollow', locale: 'zh-CN' })
   ok(followedEmpty.effects.some((effect) => effect.type === 'toast'), 'picking the session row from an empty list still answers')
   emptyFeed.stop()

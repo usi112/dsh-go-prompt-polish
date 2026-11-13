@@ -106,7 +106,7 @@ dsh-go 原生插件的 effect 白名单只有 `insert` / `copy` / `toast` / `com
 |---|---|---|---|
 | 预设 | 9 套场景模板，给改写追加一段固定要求；内置预设可改内容、不能改名或删除 | `presetId`、`presets[]` | 只有`默认`（无附加要求） |
 | 长度 | 详细 / 中等 / 简易三档，同时决定提示词里的篇幅要求和输出上限 | `length` | `medium`（与 1.3.0 逐字一致） |
-| 模型 | 固定一个本地已配置的模型，只影响「优化提示词」这一次改写 | `modelProvider`、`modelModel` | 空 = 跟随当前会话的模型 |
+| 模型 | 固定一个本地已配置的模型（列表按「官方 / 其他来源」分组），只影响「优化提示词」这一次改写 | `modelProvider`、`modelModel` | 空 = 跟随当前会话的模型 |
 | 其他 | 胶囊总开关、两个「保留」开关、改写说明、附加指令 | `enabled`、`keepTerms`、`keepCode`、`showNotes`、`allowExtra`、`extra` | 开关全开、`showNotes` 关、`extra` 空 |
 
 **9 套内置预设**（括号里是适用场景，均可在设置页改内容）：
@@ -119,7 +119,7 @@ dsh-go 原生插件的 effect 白名单只有 `insert` / `copy` / `toast` / `com
 | 排障 | 报错、行为异常 | 需求与产品 | 用户故事、验收标准 |
 | 学习讲解 | 概念、原理入门 | | |
 
-点一行 → 改「预设指令」→ 保存，改动写进 `.config.json`（内置预设存成同 id 的覆盖条目）；「恢复此预设默认」只还当前这一套，「其他 → 恢复默认设置」会连自定义预设一起清掉。模型页可以点选宿主已配置的模型，也可以手填 provider / model（只填一个不保存）。
+点一行 → 改「预设指令」→ 保存，改动写进 `.config.json`（内置预设存成同 id 的覆盖条目）；「恢复此预设默认」只还当前这一套，「其他 → 恢复默认设置」会连自定义预设一起清掉。模型页按来源分组：会话默认 / 官方模型 / 其他来源（中转、第三方、识别不出的都归这里，组内保持宿主顺序）；可以点选，也可以手填 provider / model（只填一个不保存）。
 
 保存结果显示在**页头那行 callout**：「已保存 · 21:12」，或者「写入配置失败，改动没有生效」/ 校验提示（名称不能为空、档位无效、内置预设不能改内容、这已经是默认预设、自定义预设最多 12 个、附加指令超过 500 字…）；一次都没保存过时显示「还没有保存过，当前用的是默认值」。没有改动时不会凭空生成配置文件。
 
@@ -162,7 +162,7 @@ dsh plugin --profile web add "$DSH_HOME/dsh-go/plugins/local-prompt-polish"
 
 ```sh
 node --check lib/index.js && node --check lib/polish.js
-node test/selftest.mjs        # 141 项断言
+node test/selftest.mjs        # 159 项断言
 ```
 
 插件检查器（需要本机装了 dsh-go 的 skill kit）：
@@ -208,7 +208,7 @@ local-prompt-polish/
 │   ├── settings.js       # 设置面板 polish-settings：v2 表单 / v1 降级、9 个 action
 │   ├── polish.js         # 路由解析、上下文抽取、模型改写、复述检测、长度档、本地兜底
 │   └── log.js            # .log.jsonl 追加写（只记长度与状态）
-├── test/selftest.mjs     # 141 项断言
+├── test/selftest.mjs     # 159 项断言
 ├── docs/
 │   ├── architecture.md   # 原理与边界
 │   ├── settings.md       # 设置项清单与页面结构

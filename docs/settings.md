@@ -106,7 +106,10 @@ polish-settings（stack，标题「提示词优化设置」）
    ├─ tab 模型
    │  ├─ text        modelHint（默认跟随会话模型）
    │  ├─ text        data.modelStatus →「当前：跟随当前会话的模型 / provider · model」
-   │  ├─ list        data.model.options → 第一行固定「会话默认模型」(action modelFollow)，其余是宿主可选模型（action modelPick）；列表为空时追加一行不可点说明
+   │  ├─ text · list 组「会话默认」→ data.model.session（1 行，action modelFollow）
+   │  ├─ text · list 组「官方模型」→ data.model.official（action modelPick）
+   │  ├─ text · list 组「其他来源」→ data.model.others（action modelPick）
+   │  │             空组显示一行不可点说明「这一组暂时没有模型」
    │  ├─ form        submit: saveModel，按钮「保存模型」
    │  │  ├─ textField  provider bind data.form.modelProvider
    │  │  └─ textField  model    bind data.form.modelModel
@@ -220,6 +223,18 @@ lib/index.js → loadConfig()            ← 读文件原文；和上次读到�
 | 内置预设覆盖日常场景、可指定套数、与 `length` 兼容 | `BUILTIN_PRESETS` 9 套；预设=系统提示第 8 条，`length`=第 7 条，两两组合都成立 |
 | 预设可修改、持久化、可恢复默认 | 改内置 → `presets[]` 覆盖条目；改自定义 → `{id,name,instruction}`；单套恢复 `presetRestore`，全局恢复 `resetAll` |
 | 设置页可改 API / 模型 | 不做 API 地址与 Key；改为「固定本地模型」：`modelProvider` + `modelModel`，点选宿主模型或手填，空值跟随会话 |
+
+## 模型来源分组（1.5.2）
+
+分组只用宿主已经给的信息，不在插件里硬编码模型清单：
+
+| 组 | 判定 | 例子 |
+|---|---|---|
+| 会话默认 | 永远一条 | 「会话默认模型 · 跟随当前会话，不固定」 |
+| 官方模型 | provider id 或 provider 名称命中厂商关键字（deepseek / openai / anthropic / claude / gemini / google / xai / grok / mistral / moonshot / kimi / qwen / tongyi / zhipu / glm / minimax / doubao / bytedance / baichuan / stepfun / siliconflow / openrouter） | `deepseek-account · deepseek-chat` |
+| 其他来源 | provider id 含 `custom-` / `relay-` / `proxy-` / `mirror-` / `thirdparty` / `cnkey` / `api2d` / `oneapi` / `newapi` / `modlens-`，或名称含「中转 / 自定义 / 第三方 / 代理」；**以及所有识别不出来的 provider** | `custom-cnkey · glm-5.3-flash`、`modlens-deepseek-account · deepseek-v4-pro` |
+
+判断顺序：先判「其他来源」关键字（避免 `custom-deepseek` 被算成官方），再判官方关键字，剩下的一律「其他来源」。组内顺序 = `llm.listProviders()` 的顺序 + `llm.listModels()` 的顺序，不排序、不截断（每组最多 22 行）。
 
 ## 已知限制
 
