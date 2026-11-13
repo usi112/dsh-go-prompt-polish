@@ -21,6 +21,7 @@ import {
   resetConfig,
   saveConfig,
 } from '../lib/config.js'
+import * as settings from '../lib/settings.js'
 import { __setModelsForTest, buildData, settingsView } from '../lib/settings.js'
 import { LENGTH_TIERS, buildLocalPrompt, collectContext, resolveRoute, stripEcho, systemPrompt } from '../lib/polish.js'
 
@@ -421,7 +422,8 @@ if (existsSync(kit)) {
   eq(emptyFeed.data.model.session[0].title, '会话默认模型', 'the session row still shows up')
   ok(emptyFeed.data.model.official.length === 1 && emptyFeed.data.model.official[0].title === '这一组暂时没有模型', 'the empty official group shows an explanation row')
   ok(emptyFeed.data.model.others.length === 1 && emptyFeed.data.model.others[0].action === undefined, 'the empty other group row is not tappable')
-  ok(emptyFeed.data.model.options.some((row) => row.title.includes('还没读到可选模型')), 'the manual-fill hint survives in the flat list')
+  eq(emptyFeed.data.model.official[0].subtitle, undefined, 'the explanation row has no action payload')
+  ok(emptyFeed.data.model.others[0].title === '这一组暂时没有模型', 'the other group explains the empty state too')
   const followedEmpty = await host.invoke('polish-settings', { action: 'modelFollow', locale: 'zh-CN' })
   ok(followedEmpty.effects.some((effect) => effect.type === 'toast'), 'picking the session row from an empty list still answers')
   emptyFeed.stop()
@@ -445,6 +447,88 @@ if (existsSync(kit)) {
   eq(missing, [], 'every settings binding resolves against the panel data')
   const missingV1 = bindingPaths(settingsView({}, { locale: 'zh-CN', components: [] })).filter((path) => resolvePath(panelData, path) === undefined)
   eq(missingV1, [], 'every fallback binding resolves too')
+
+  // R2：大列表裁剪 + 组尾提示 + patch 体积
+  __setModelsForTest(Array.from({ length: 15 }, (_, i) => ({ provider: 'deepseek-account', providerName: 'DeepSeek', id: `m${i}`, name: `M${i}` })))
+  const bigFeed = host.subscribe('polish-settings', {})
+  await bigFeed.settled
+  eq(bigFeed.data.model.official.length, 13, 'a long group keeps 12 rows plus one more-hint row')
+  ok(String(bigFeed.data.model.official.at(-1).title).includes('还有 3 个'), 'the clipped group says how many are hidden')
+  __setModelsForTest([{ provider: 'deepseek-account', providerName: 'DeepSeek', id: 'x'.repeat(200), name: 'n'.repeat(200) }])
+  const clippedFeed = host.subscribe('polish-settings', {})
+  await clippedFeed.settled
+  ok(clippedFeed.data.model.official[0].title.length <= 61, 'model names are clipped')
+  ok(clippedFeed.data.model.official[0].subtitle.length <= 121, 'provider · model pairs are clipped')
+  const bigPatch = await host.invoke('polish-settings', { action: 'saveLength', locale: 'zh-CN', value: { values: { 'data.form.length': 'simple' } } })
+  const patchBytes = Buffer.byteLength(JSON.stringify(bigPatch.effects.find((e) => e.type === 'patch').data))
+  ok(patchBytes <= 16384, `the patch stays inside 16 KiB (${patchBytes} B)`)
+  bigFeed.stop()
+  clippedFeed.stop()
+
+  // R6：超长预设整单拒绝；连续新建不重名
+  saveConfig({ ...defaults(), presets: [], length: 'simple' })
+  const tooLongPreset = await host.invoke('polish-settings', { action: 'presetSave', locale: 'zh-CN', value: { values: {
+    'data.form.presetName': '名'.repeat(30),
+    'data.form.presetInstruction': '',
+    'data.form.presetId': 'default',
+  } } })
+  ok(tooLongPreset.effects.some((effect) => effect.type === 'toast' && effect.text.includes('长度上限')), 'an overlong preset name is refused, not cut')
+  saveConfig({ ...defaults(), presets: [] })
+  const first = await host.invoke('polish-settings', { action: 'presetNew', locale: 'zh-CN' })
+  ok(first.issues.length === 0, 'first new preset ok')
+  await host.invoke('polish-settings', { action: 'presetNew', locale: 'zh-CN' })
+  const names = JSON.parse(readFileSync(configFile(), 'utf8')).presets.map((item) => item.name)
+  ok(names.length === 2 && names[0] !== names[1], 'two new presets get different display names')
+
+  // R3：两个会话各编辑各的；表单带 presetId 时以表单为准
+  saveConfig({ ...defaults(), presets: [
+    { id: 'pa', name: 'A', instruction: 'a' },
+    { id: 'pb', name: 'B', instruction: 'b' },
+  ], presetId: 'pa' })
+  const editA = await host.invoke('polish-settings', { scope: { sessionId: 'sA' }, action: 'presetEdit', locale: 'zh-CN', value: { id: 'pa' } })
+  ok(editA.issues.length === 0, 'session A selects pa')
+  await host.invoke('polish-settings', { scope: { sessionId: 'sB' }, action: 'presetEdit', locale: 'zh-CN', value: { id: 'pb' } })
+  const saveFromA = await host.invoke('polish-settings', { scope: { sessionId: 'sA' }, action: 'presetSave', locale: 'zh-CN', value: { values: {
+    'data.form.presetId': 'pa',
+    'data.form.presetName': 'A2',
+    'data.form.presetInstruction': 'a2',
+  } } })
+  ok(saveFromA.issues.length === 0, 'session A saves its own preset')
+  const afterAB = JSON.parse(readFileSync(configFile(), 'utf8'))
+  eq(afterAB.presets.find((item) => item.id === 'pb'), { id: 'pb', name: 'B', instruction: 'b' }, 'session B preset is untouched by session A save')
+
+  // R1：模型读取失败不会「一次即终身」——再次打开面板会重试
+  let providerCalls = 0
+  const flakyLlm = {
+    listProviders: () => {
+      providerCalls += 1
+      if (providerCalls === 1) throw new Error('boom')
+      return [{ id: 'deepseek-account', name: 'DeepSeek' }]
+    },
+    listModels: async () => [{ id: 'deepseek-chat', name: 'DeepSeek Chat' }],
+  }
+  const flakyHost = createTestHost({ dir: fileURLToPath(new URL('..', import.meta.url)), caps: { locale: 'zh-CN' }, services: { llm: flakyLlm } })
+  apply(flakyHost.ctx)
+  settings.__setModelsForTest([])
+  const f1 = flakyHost.subscribe('polish-settings', {})
+  await f1.settled
+  await new Promise((resolve) => setTimeout(resolve, 10))
+  f1.stop()
+  const f2 = flakyHost.subscribe('polish-settings', {})
+  await f2.settled
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  ok(providerCalls >= 2, 'a failed model read is retried on the next panel open')
+  eq(f2.data.model.official.length, 1, 'the retry fills the official group')
+  f2.stop()
+
+  // R6：英文 toast 一律在协议 40 字以内（避免被桥截断）
+  const enToastFields = ['saved', 'saveFail', 'errName', 'errLength', 'errLimit', 'errGone', 'errModelPair', 'errBuiltinDelete', 'restored', 'already', 'nochange', 'tooLongPreset', 'overlength', 'modelPicked', 'refreshed']
+  const enBlock = (readFileSync(new URL('../lib/settings.js', import.meta.url), 'utf8').match(/en: \{[\s\S]*?\n  \},/) ?? [''])[0]
+  const longToast = enToastFields.filter((field) => {
+    const found = new RegExp(`${field}: '([^']*)'`).exec(enBlock)
+    return found !== null && found[1].length > 40
+  })
+  eq(longToast, [], 'every English toast fits the 40-character limit')
 
   const english = buildData(false)
   ok(english.summary.startsWith('Now：') || english.summary.startsWith('Now:'), 'the page follows the locale')

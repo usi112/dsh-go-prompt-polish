@@ -1,6 +1,6 @@
 # ✦ 一句话 → 好提示词 · Prompt Polish
 
-![version](https://img.shields.io/badge/version-1.5.2-4d6bfe)
+![version](https://img.shields.io/badge/version-1.5.3-4d6bfe)
 ![platform](https://img.shields.io/badge/platform-dsh--go%20%C2%B7%20Android-3ddc84)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 [![check](https://github.com/usi112/dsh-go-prompt-polish/actions/workflows/check.yml/badge.svg)](https://github.com/usi112/dsh-go-prompt-polish/actions/workflows/check.yml)
@@ -13,7 +13,7 @@
 
 - **9 套场景预设**：默认、写代码、代码审查、排障、写文档、写作润色、数据与 SQL、需求与产品、学习讲解。每套都能改内容、能设为默认、能一键恢复出厂；内置的名字和 id 不会被改坏。
 - **长度三档**：详细（2–3 倍、≤800 字）/ 中等（≤3 倍、≤600 字，与 1.3.0 逐字一致）/ 简易（≤草稿长度、≤200 字），档位同时决定提示词措辞与输出上限。
-- **模型按来源分组**：会话默认 / 官方模型 / 其他来源（中转、第三方、识别不出的都归这里），可以点选，也可以手填 provider + model；不改这里就跟随当前会话的模型。
+- **模型按来源分组**：会话默认 / 官方模型 / 其他来源（中转、第三方、聚合平台、识别不出的都归这里），可以点选、可以手填 provider + model、也可以「重新读取模型」；不改这里就跟随当前会话的模型。
 - **其他开关**：胶囊总开关、保留专有名词、保留代码与路径、确认页显示改写说明、附加指令（≤500 字）。
 - 所有设置写在插件目录的 `.config.json`（原子写、`gitignore`），**什么都不配时行为和 1.3.0 一样**。
 
@@ -140,7 +140,7 @@ dsh-go 原生插件的 effect 白名单只有 `insert` / `copy` / `toast` / `com
 # 1) 放进插件目录
 mkdir -p "$DSH_HOME/dsh-go/plugins"
 curl -L -o /tmp/p.tgz \
-  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.5.2/local-prompt-polish-1.5.2.tgz
+  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.5.3/local-prompt-polish-1.5.3.tgz
 tar xzf /tmp/p.tgz -C "$DSH_HOME/dsh-go/plugins/"
 
 # 2) 注册进当前 profile（手机本机引擎是 web）
@@ -168,7 +168,7 @@ dsh plugin --profile web add "$DSH_HOME/dsh-go/plugins/local-prompt-polish"
 
 ```sh
 node --check lib/index.js && node --check lib/polish.js
-node test/selftest.mjs        # 159 项断言
+node test/selftest.mjs        # 174 项断言
 ```
 
 插件检查器（需要本机装了 dsh-go 的 skill kit）：
@@ -192,6 +192,8 @@ node "$DSH_HOME/skills/dsh-go-plugin/kit/bin/check.mjs" . --load
 
 **会不会把我的对话发出去？** 只发给你自己配置的模型（当前会话那个），不经过任何第三方服务；`.log.jsonl` 只记长度和状态，不记文本。
 
+**模型列表一直是空的或旧的？** 1.5.3 起模型缓存只有 60 秒，空结果或读取失败会自动重试；模型页还有「重新读取模型」按钮。仍为空就检查宿主是否已经配置了模型服务。
+
 **模型页显示「暂无数据」？** 1.5.1 已修：状态行改成纯文本，列表第一条固定是「会话默认模型」，宿主没有可选模型时会多一行手填说明。升级后在 App「设置 → 引擎 → 重启引擎」一次即可。
 
 **重启引擎后胶囊没了？** 检查 `dsh plugin --profile web list` 里还有没有 `local-prompt-polish`，以及插件目录是否被删。
@@ -214,7 +216,7 @@ local-prompt-polish/
 │   ├── settings.js       # 设置面板 polish-settings：v2 表单 / v1 降级、9 个 action
 │   ├── polish.js         # 路由解析、上下文抽取、模型改写、复述检测、长度档、本地兜底
 │   └── log.js            # .log.jsonl 追加写（只记长度与状态）
-├── test/selftest.mjs     # 159 项断言
+├── test/selftest.mjs     # 174 项断言
 ├── docs/
 │   ├── architecture.md   # 原理与边界
 │   ├── settings.md       # 设置项清单与页面结构

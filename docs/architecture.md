@@ -47,7 +47,7 @@ effect 白名单没有 replace/clear；`insert` 在 App 侧是合并。因此：
 | 文件 | 职责 | 不做什么 |
 |---|---|---|
 | `lib/config.js` | 唯一读写 `.config.json` 的地方：`defaults()`、`normalize()`（逐字段回落 + 截断）、`loadConfig()`（读原文与上次比对，相同才复用解析结果）、`saveConfig()` / `resetConfig()`（tmp + rename 原子写）、预设增删改查、`polishOptions()` | 不画界面、不碰 effect |
-| `lib/settings.js` | 只画面板 `polish-settings`：`settingsView()` / `settingsData()` / 9 个 action、v2 表单与 v1 摘要页 | 不持有配置状态，不缓存用户输入 |
+| `lib/settings.js` | 只画面板 `polish-settings`：`settingsView()` / `createData()` / `createActions()`（13 个 action）、v2 表单与 v1 摘要页 | 不持有配置状态，不缓存用户输入 |
 
 ### 表单 submit 的形状
 

@@ -1,5 +1,32 @@
 # 更新日志
 
+## 1.5.3 — 按外部审计修 P1/P2 与一批 P3
+
+**P1**
+- 模型枚举不再「一次即终身」：缓存改成 60s TTL，空结果/读取失败不再固化；面板重新打开会重试；模型页新增「重新读取模型」按钮（`modelRefresh`）
+
+**P2**
+- 模型页载荷：模型名/`provider · model` 按 60/120 字裁剪，删掉视图不再使用的 `data.model.options`（省约 4.8 KB）；每组上限 12 行，超出显示「还有 N 个，可在下方手填」；41 行场景的 patch 回到 16 KiB 以内
+- 设置页状态按会话隔离：`editingId` / `status` 从模块级单例改成按 `sessionId` 分开，表单提交带上 `data.form.presetId`，两个面板同时开不会再写错预设
+- 适配器不理会 `AbortSignal` 时：`startJob` 用 `Promise.race` 硬超时，超时立刻用本地整理稿并提示「模型超时」，确认页不再永久停在「正在优化…」
+
+**P3（审计清单）**
+- 聚合平台（openrouter / siliconflow / together / groq / poe / one-api…）归「其他来源」，不再算官方
+- 过滤空白 provider id / 空白模型名；`listProviders()` 返回 Map/Set 也能读
+- 手改出「半对」模型配置时，状态行标「配置不完整，按跟随会话处理」，列表不显示选中项
+- 固定的模型不在宿主列表时，顶部补一行「已固定（不在当前列表）」
+- 「无改动保存」文案区分「已经是默认预设」与「内容没有变化」
+- 超长预设名/指令改为整单拒绝，与附加指令策略一致
+- 连续新建不再出现两个同名「预设 N」
+- 英文 toast 全部收进协议 40 字上限
+- 删除死代码 `locked` / `errLocked`；`settingsData` 死导出
+- `v` 字段永远写回当前 `CONFIG_VERSION`；保存时保留手写的未知字段
+- 日志 `preset` 字段不再把内置覆盖记成 `custom`；`config.js` 注释去掉不存在的 `lib/secrets.js`
+- `showNotes` 在 loading 阶段显示「正在改写…」而不是空块
+- 文档：`docs/settings.md` 修正「内置默认不可改」等与实现不一致的表述
+
+- 自测 160 → 174 项（新增：TTL 重试、载荷裁剪与 16 KiB patch、双会话隔离、超长拒绝、重名、英文 toast 长度）
+
 ## 1.5.2 — 模型列表按来源分组
 
 - 模型页从一锅端改成三组：**会话默认**（1 行，跟随会话）/ **官方模型** / **其他来源**，组内保持宿主 `listProviders()` + `listModels()` 的顺序，不重排。

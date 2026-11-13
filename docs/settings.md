@@ -106,15 +106,17 @@ polish-settings（stack，标题「提示词优化设置」）
    ├─ tab 模型
    │  ├─ text        modelHint（默认跟随会话模型）
    │  ├─ text        data.modelStatus →「当前：跟随当前会话的模型 / provider · model」
+   │  │             半对配置时追加「（配置不完整，按跟随会话处理）」
    │  ├─ text · list 组「会话默认」→ data.model.session（1 行，action modelFollow）
+   │  ├─ list        data.model.pinned（固定模型不在宿主列表时的一行说明）
    │  ├─ text · list 组「官方模型」→ data.model.official（action modelPick）
    │  ├─ text · list 组「其他来源」→ data.model.others（action modelPick）
-   │  │             空组显示一行不可点说明「这一组暂时没有模型」
+   │  │             每组最多 12 行；超出显示「还有 N 个，可在下方手填」；空组显示「这一组暂时没有模型」
    │  ├─ form        submit: saveModel，按钮「保存模型」
    │  │  ├─ textField  provider bind data.form.modelProvider
    │  │  └─ textField  model    bind data.form.modelModel
    │  ├─ text        modelManual（provider / model 要成对填）
-   │  └─ actions     「改回跟随会话」 → action modelFollow
+   │  └─ actions     「改回跟随会话」→ modelFollow；「重新读取模型」→ modelRefresh
    └─ tab 其他
       ├─ text        otherHint
       ├─ form        submit: saveOther，按钮「保存其他设置」
@@ -147,7 +149,7 @@ action 一览（`lib/settings.js → SETTINGS_ACTIONS`）：
 | `lengthCycle` | v1 降级页「切换长度档」 | `length` 循环切到下一档 |
 | `toggleEnabled` | v1 降级页「开/关胶囊」 | `enabled` 取反 |
 
-**保存结果在页头 callout 里**：成功是绿色「已保存 · HH:MM」（带本地时间），写盘失败是「写入配置失败，改动没有生效」，其余是同一位置的警告文案（`预设名称不能为空` / `档位取值无效` / `内置预设不能删除，只能恢复默认内容` / `这已经是默认预设，没有要改的` / `自定义预设最多 12 个` / `这个预设已经不在了，请刷新` / `附加指令最多 500 字` / `provider 与 model 要一起填，或者都留空`）；一次都没保存过时显示 `还没有保存过，当前用的是默认值`。每次保存后页面数据整体重推一遍（`publish()`），所以开关、档位、列表立刻跟着变，不用退出重进。v1 摘要页没有 callout 组件，同样的状态文案以一行普通文本显示在摘要下面。
+**保存结果在页头 callout 里**：成功是绿色「已保存 · HH:MM」（带本地时间），写盘失败是「写入配置失败，改动没有生效」，其余是同一位置的警告文案（`预设名称不能为空` / `档位取值无效` / `内置预设不能删除，只能恢复默认内容` / `这已经是默认预设，没有要改的` / `自定义预设最多 12 个` / `这个预设已经不在了，请刷新` / `附加指令最多 500 字` / `provider 与 model 要一起填，或者都留空` / `内容没有变化，无需保存` / `预设名称或指令超出长度上限，请缩短后再保存` / `已重新读取模型`）；一次都没保存过时显示 `还没有保存过，当前用的是默认值`。每次保存后页面数据整体重推一遍（`publish()`），所以开关、档位、列表立刻跟着变，不用退出重进。v1 摘要页没有 callout 组件，同样的状态文案以一行普通文本显示在摘要下面。
 
 ## 配置如何生效
 
@@ -212,7 +214,7 @@ lib/index.js → loadConfig()            ← 读文件原文；和上次读到�
 |---|---|---|---|
 | 1 | 一个能改设置的面板，三块内容分开：预设 / 长度 / 其他；有 + 菜单入口，停用时点胶囊自动带过去 | `lib/settings.js`（面板 `polish-settings`、视图 v2 的 `tabs`）；`package.json` 的 `panels` + `composer.tools → open-settings`；`lib/index.js` 的停用分支返回 `open: panel:polish-settings` | 满足 |
 | 2 | 设置要能存住、改完立刻生效，配置文件坏掉不能把插件弄崩 | `lib/config.js`：`.config.json`（`PROMPT_POLISH_CONFIG` 可覆盖）、临时文件 + `renameSync` 原子写、`loadConfig()` 按文件原文比对的缓存、`normalize()` 逐字段回落 | 满足 |
-| 3 | 预设能新建 / 改名 / 写指令 / 设为默认 / 删除，内置「默认」不可改 | `lib/settings.js` 的 `presetNew` / `presetSave` / `presetEdit` / `presetDelete`；`lib/config.js` 的 `BUILTIN_PRESETS`、`normalizePresets()`、`newPreset()`、`MAX_PRESETS = 12` | 满足 |
+| 3 | 预设能新建 / 改名 / 写指令 / 设为默认 / 删除；9 套内置预设可改内容、不可改名或删除 | `lib/settings.js` 的 `presetNew` / `presetSave` / `presetEdit` / `presetDelete`；`lib/config.js` 的 `BUILTIN_PRESETS`、`normalizePresets()`、`newPreset()`、`MAX_PRESETS = 12` | 满足 |
 | 4 | 长度三档，默认「中等」必须与 1.3.0 完全一致 | `lib/polish.js` 的 `LENGTH_TIERS`（1400/1900 · 900/1900 · 400/500）与 `systemPrompt()` 的第 7 条；`lib/config.js` 的 `DEFAULT_LENGTH = 'medium'` | 满足（`systemPrompt(true)` 与 1.3.0 原文逐字相等，已用脚本比对） |
 | 5 | 其他开关（总开关、两个保留、改写说明、附加指令）落到提示词；旧 App 也改得动设置 | `lib/config.js → polishOptions()`；`lib/polish.js` 的 `keepRule()`（第 4 条）、第 8 条预设、第 9 条附加指令；`lib/index.js` 的 `notesFor()` 与 `panelView()`；`lib/settings.js` 的 `viewV1()` + `lengthCycle` / `toggleEnabled` | 满足（旧 App 只有摘要页，没有预设表单，见下） |
 
@@ -231,10 +233,21 @@ lib/index.js → loadConfig()            ← 读文件原文；和上次读到�
 | 组 | 判定 | 例子 |
 |---|---|---|
 | 会话默认 | 永远一条 | 「会话默认模型 · 跟随当前会话，不固定」 |
-| 官方模型 | provider id 或 provider 名称命中厂商关键字（deepseek / openai / anthropic / claude / gemini / google / xai / grok / mistral / moonshot / kimi / qwen / tongyi / zhipu / glm / minimax / doubao / bytedance / baichuan / stepfun / siliconflow / openrouter） | `deepseek-account · deepseek-chat` |
-| 其他来源 | provider id 含 `custom-` / `relay-` / `proxy-` / `mirror-` / `thirdparty` / `cnkey` / `api2d` / `oneapi` / `newapi` / `modlens-`，或名称含「中转 / 自定义 / 第三方 / 代理」；**以及所有识别不出来的 provider** | `custom-cnkey · glm-5.3-flash`、`modlens-deepseek-account · deepseek-v4-pro` |
+| 官方模型 | provider id 或 provider 名称命中厂商关键字（deepseek / openai / anthropic / claude / gemini / google / xai / grok / mistral / moonshot / kimi / qwen / tongyi / zhipu / glm / minimax / doubao / bytedance / baichuan / stepfun） | `deepseek-account · deepseek-chat` |
+| 其他来源 | provider id 含 `custom-` / `relay-` / `proxy-` / `mirror-` / `thirdparty` / `cnkey` / `api2d` / `oneapi` / `newapi` / `modlens-`，名称含「中转 / 自定义 / 第三方 / 代理」，或属于聚合平台（`openrouter` / `siliconflow` / `together` / `fireworks` / `groq` / `deepinfra` / `poe` / `one-api` / `llm-gateway`）；**以及所有识别不出来的 provider** | `custom-cnkey · glm-5.3-flash`、`modlens-deepseek-account · deepseek-v4-pro`、`openrouter · x` |
 
 判断顺序：先判「其他来源」关键字（避免 `custom-deepseek` 被算成官方），再判官方关键字，剩下的一律「其他来源」。组内顺序 = `llm.listProviders()` 的顺序 + `llm.listModels()` 的顺序，不排序、不截断（每组最多 22 行）。
+
+## 1.5.3 的稳定性改动
+
+| 改动 | 说明 |
+|---|---|
+| 模型缓存带 TTL | 60 秒；空结果/读取失败不固化，面板重开会重试；模型页有「重新读取模型」 |
+| 行数上限与裁剪 | 每组 12 行、组尾「还有 N 个」；模型名 60 字、`provider · model` 120 字；删除冗余 `data.model.options`，41 行场景的 patch 仍在 16 KiB 内 |
+| 按会话隔离 | 编辑目标与保存状态按 `sessionId` 分开；表单提交带 `data.form.presetId` |
+| 硬超时 | 适配器不理会 `AbortSignal` 时，45 秒后放弃并显示本地整理稿 + 「模型超时」提示 |
+| 保存元数据 | `v` 永远写回当前版本；手写的未知字段在保存时保留 |
+| 英文 toast | 全部 ≤ 40 字，避免被桥截断 |
 
 ## 已知限制
 
