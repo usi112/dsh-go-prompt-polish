@@ -17,6 +17,7 @@
 | `length` | 枚举 `detailed` / `medium` / `simple` | `medium`（`DEFAULT_LENGTH`） | 输出长度档；非法值回落 `medium` | `polishOptions()` → `lib/polish.js → tierOf()`（`maxTokens` / `maxChars`）+ `systemPrompt()` 第 7 条 |
 | `presetId` | 字符串 | `default`（`DEFAULT_PRESET_ID`） | 当前选中的预设；指向不存在的 id 时回落内置「默认」 | `polishOptions()` → `activePreset()` → `systemPrompt()` 第 8 条 |
 | `presets[]` | 数组，元素 `{ id, instruction }`（内置）或 `{ id, name, instruction }`（自定义） | `[]` | 预设改动：**id 是 9 套内置之一 → 只认 instruction，等于改内置预设的内容**；其他 id → 自定义预设（最多 12 个，`name` ≤ 24 字且不能为空）。`instruction` ≤ 500 字；重复 id 只留第一条 | `presetsOf(config, zh)` → `polishOptions()` → `systemPrompt()` 第 8 条 |
+| `contextStrategy` | `smart` \| `recent` | `smart` | 长会话上下文策略：`smart` 先取宿主 `compaction/summary` 摘要（≤40% 预算）再补摘要后的最近消息；`recent` 只看最近消息（=1.3.0） | `polishOptions().context` → `collectContext()` |
 | `contextMessages` | 整数 | `8` | 读取最近多少条 user/assistant 消息做上下文，范围 1–32 | `polishOptions().context` → `lib/polish.js → collectContext()` |
 | `contextChars` | 整数 | `1600` | 上下文总字数上限，范围 200–8000 | 同上 |
 | `modelProvider` | 字符串 | `''`（跟随会话模型） | 固定使用的 provider id，例如 `deepseek` | `polishOptions().model` → `requestPolish()` 优先用它，否则 `resolveRoute()` 走会话模型 |
@@ -126,6 +127,7 @@ polish-settings（stack，标题「提示词优化设置」）
       │  ├─ toggle     保留代码、路径与标识符   bind data.form.keepCode
       │  ├─ toggle     确认页显示改写说明       bind data.form.showNotes
       │  ├─ toggle     允许使用附加指令         bind data.form.allowExtra
+      │  ├─ segmented  长会话怎么读上下文  bind data.form.contextStrategy（smart / recent）
       │  ├─ text        contextHint（默认 8 条 / 1600 字，条数 1–32、字数 200–8000）
       │  ├─ number     读取最近几条消息         bind data.form.contextMessages（1–32）
       │  ├─ number     上下文总字数上限         bind data.form.contextChars（200–8000，step 100）
@@ -268,6 +270,17 @@ lib/index.js → loadConfig()            ← 读文件原文；和上次读到�
 - **再来一版**：确认页新增按钮，重新跑同一个草稿；任务 id 递增，旧结果返回时会被丢弃。
 - **上下文可自由设置**：`contextMessages`（1–32，默认 8）与 `contextChars`（200–8000，默认 1600）在设置页「其他」；越界整单拒绝并提示范围；默认值与 1.3.0 行为一致。
 - 长度档位没有变化：详细 / 中等（≤3 倍、≤600 字，硬上限 1900）/ 简易。
+
+## 1.7.0：长会话的上下文
+
+| 策略 | 取什么 | 预算 | 等价于 |
+|---|---|---|---|
+| `smart`（默认） | 最后一个 `compaction/summary` 的 `summary` + 摘要之后的最近 N 条消息 | 摘要 ≤ 40% `contextChars`，其余给消息；总量不超 `contextChars` | 1.7.0 新行为 |
+| `recent` | 只取最近 N 条消息 | 全部给消息 | 1.3.0 |
+
+- 摘要来自宿主自己的压缩流程（`dsh-compaction`），插件只读日志，不额外调模型、不联网。
+- 被摘要覆盖的旧消息不会重复展开；没有摘要事件时 `smart` 与 `recent` 输出相同。
+- 输出会带「【更早对话摘要】」「【最近对话】」两个小标题，让模型知道时序。
 
 ## 已知限制
 

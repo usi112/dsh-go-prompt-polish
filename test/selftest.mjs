@@ -110,10 +110,26 @@ const longLog = Array.from({ length: 10 }, (_, i) => ({
   data: { content: [{ type: 'text', text: `第${i + 1}条：${'内容'.repeat(80)}` }] },
 }))
 const many = collectContext(fakeCtx({ log: longLog }), 's1', { messages: 3, chars: 8000 })
-eq(many.split('\n').length, 3, 'the context message count follows the setting')
+eq(many.split('\n').filter((line) => line.startsWith('用户：') || line.startsWith('助手：')).length, 3, 'the context message count follows the setting')
 const short = collectContext(fakeCtx({ log: longLog }), 's1', { messages: 10, chars: 200 })
 ok(short.length <= 200, 'the context character budget follows the setting')
-eq(collectContext(fakeCtx({ log: longLog }), 's1').split('\n').length, 8, 'the default remains 8 messages')
+eq(collectContext(fakeCtx({ log: longLog }), 's1').split('\n').filter((line) => line.startsWith('用户：') || line.startsWith('助手：')).length, 8, 'the default remains 8 messages')
+
+// 长会话：智能策略优先用宿主压缩摘要 + 摘要之后的最近消息；recent 保持旧行为
+const compacted = [
+  { type: 'user/message', data: { content: [{ type: 'text', text: '最早的目标：给周报插件加设置页' }] } },
+  { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: '好的，先看现有结构' }] } } },
+  { type: 'compaction/summary', data: { summary: '前 20 轮：用户要给插件加设置页，已完成预设与长度档，待做模型选择与上下文。' } },
+  { type: 'user/message', data: { content: [{ type: 'text', text: '继续做上下文设置' }] } },
+  { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: '上下文条数改成可配置' }] } } },
+]
+const smart = collectContext(fakeCtx({ log: compacted }), 's1', { strategy: 'smart', messages: 8, chars: 1600 })
+ok(smart.includes('【更早对话摘要】') && smart.includes('前 20 轮'), 'smart context carries the compaction summary')
+ok(smart.includes('继续做上下文设置'), 'smart context keeps the turns after the summary')
+ok(!smart.includes('最早的目标'), 'summarised turns are not repeated verbatim')
+const recentOnly = collectContext(fakeCtx({ log: compacted }), 's1', { strategy: 'recent', messages: 8, chars: 1600 })
+ok(!recentOnly.includes('【更早对话摘要】'), 'recent strategy ignores the summary')
+ok(recentOnly.includes('最早的目标'), 'recent strategy still reads the old turns')
 
 // ── capsule: guard rails, then open the confirm page ───────────────────────
 const offline = boot({ get: () => undefined })
@@ -199,7 +215,7 @@ ok(!('message.actions' in pkg.dshGo.contributes), 'no leftover probe contributio
 // ── config: defaults, tolerance, presets ───────────────────────────────────
 eq(loadConfig().enabled, true, 'a missing config file means defaults')
 eq(loadConfig().length, DEFAULT_LENGTH, 'the default tier is medium')
-eq(polishOptions(defaults(), true), { length: 'medium', keepTerms: true, keepCode: true, preset: undefined, extra: undefined, context: { messages: 8, chars: 1600 }, model: undefined }, 'defaults mean the 1.3.0 prompt')
+eq(polishOptions(defaults(), true), { length: 'medium', keepTerms: true, keepCode: true, preset: undefined, extra: undefined, context: { strategy: 'smart', messages: 8, chars: 1600 }, model: undefined }, 'defaults keep the 1.3.0 prompt and sizes')
 const dirty = normalize({ length: 'huge', presetId: 'nope', presets: [{ id: 'p1', name: '  ', instruction: 'x' }, { id: 'p2', name: '严谨', extra: 1 }], extra: 'y'.repeat(900) })
 eq(dirty.config.length, 'medium', 'an unknown tier falls back to medium')
 eq(dirty.config.presetId, 'default', 'an unknown preset id falls back to the built-in one')
@@ -335,6 +351,13 @@ if (existsSync(kit)) {
   })
   eq(contextSave.issues, [], 'saving the context length produces no issues')
   eq([JSON.parse(readFileSync(configFile(), 'utf8')).contextMessages, JSON.parse(readFileSync(configFile(), 'utf8')).contextChars], [12, 3200], 'the context length is stored')
+  const strategySave = await submit('saveOther', {
+    'data.form.contextStrategy': 'recent',
+    'data.form.contextMessages': 12,
+    'data.form.contextChars': 3200,
+    'data.form.extra': '先给验收标准',
+  })
+  eq(JSON.parse(readFileSync(configFile(), 'utf8')).contextStrategy, 'recent', 'the context strategy is stored')
   const badContext = await submit('saveOther', {
     'data.form.contextMessages': 40,
     'data.form.contextChars': 3200,

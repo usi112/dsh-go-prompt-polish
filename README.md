@@ -1,6 +1,6 @@
 # ✦ 一句话 → 好提示词 · Prompt Polish
 
-![version](https://img.shields.io/badge/version-1.6.0-4d6bfe)
+![version](https://img.shields.io/badge/version-1.7.0-4d6bfe)
 ![platform](https://img.shields.io/badge/platform-dsh--go%20%C2%B7%20Android-3ddc84)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 [![check](https://github.com/usi112/dsh-go-prompt-polish/actions/workflows/check.yml/badge.svg)](https://github.com/usi112/dsh-go-prompt-polish/actions/workflows/check.yml)
@@ -9,7 +9,7 @@
 
 不发送消息 · 不改对话内容 · 不额外联网（只走你已配置的模型）
 
-**1.6.0 能做什么**
+**1.7.0 能做什么**
 
 - **9 套场景预设**：默认、写代码、代码审查、排障、写文档、写作润色、数据与 SQL、需求与产品、学习讲解。每套都能改内容、能设为默认、能一键恢复出厂；内置的名字和 id 不会被改坏。
 - **长度三档**：详细（2–3 倍、≤800 字）/ 中等（≤3 倍、≤600 字，与 1.3.0 逐字一致）/ 简易（≤草稿长度、≤200 字），档位同时决定提示词措辞与输出上限。
@@ -17,7 +17,8 @@
 - **其他开关**：胶囊总开关、保留专有名词、保留代码与路径、确认页显示改写说明、附加指令（≤500 字）。
 - 所有设置写在插件目录的 `.config.json`（原子写、`gitignore`），**什么都不配时行为和 1.3.0 一样**。
 - **确认页可「再来一版」**：不满意就重跑，同一个草稿、同一套设置；重跑时页面显示「正在优化…」，旧结果不会被当成新结果。确认页现在四个按钮：复制优化稿 / 追加到输入框 / 再来一版 / 取消。
-- **上下文可自由设置**：读几条最近消息（1–32）、总共多少字（200–8000），默认 8 条 / 1600 字，与 1.3.0 一致。
+- **上下文可自由设置**：读几条最近消息（1–32）、总共多少字（200–8000），默认 8 条 / 1600 字。
+- **长会话不再丢目标**：上下文策略默认「智能」——先取宿主的压缩摘要（`compaction/summary`），再补摘要之后的最近消息，摘要最多占 40% 预算；切到「只看最近消息」就是 1.3.0 的旧行为。
 - 1.5.3 的稳定性修复也在：模型列表 60 秒自动重试 +「重新读取模型」、大列表裁剪不越限、设置页按会话隔离、模型超时自动回落本地稿；视图里任何列表都保证非空（空列表会被 App 画成「暂无数据」，有回归测试盯着）。
 
 > 仓库 `dsh-go-prompt-polish` · 插件包名 `local-prompt-polish`（安装目录用这个名字）
@@ -144,7 +145,7 @@ dsh-go 原生插件的 effect 白名单只有 `insert` / `copy` / `toast` / `com
 # 1) 放进插件目录
 mkdir -p "$DSH_HOME/dsh-go/plugins"
 curl -L -o /tmp/p.tgz \
-  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.6.0/local-prompt-polish-1.6.0.tgz
+  https://github.com/usi112/dsh-go-prompt-polish/releases/download/v1.7.0/local-prompt-polish-1.7.0.tgz
 tar xzf /tmp/p.tgz -C "$DSH_HOME/dsh-go/plugins/"
 
 # 2) 注册进当前 profile（手机本机引擎是 web）
@@ -161,8 +162,7 @@ dsh plugin --profile web add "$DSH_HOME/dsh-go/plugins/local-prompt-polish"
 
 | 组合 | 结果 |
 |---|---|
-| dsh 0.2.2-rc.1 · App **1.0.16** · Android 16 | 已实测（胶囊 + 确认页 + 复制/追加/取消）；1.0.16 未改插件 effect 白名单，行为与 1.0.15 一致 |
-| dsh 0.2.2-rc.1 · App 1.0.15 · Android 16 | 已实测（同上） |
+| dsh 0.2.2-rc.1 · App 1.0.15 · Android 16 | 已实测（胶囊 + 确认页 + 复制/追加/取消） |
 | 生成回复进行中 | 胶囊会收起（App 行为），回复结束后可点 |
 | 没有可用模型 | 立即返回本地整理稿，不弹等待 |
 | 旧 App（`caps.components` 不含表单组件） | 设置页降级为 v1 摘要页：只显示当前值 + 「切换长度档」「开/关胶囊」两个按钮，配置照样能改 |
@@ -173,7 +173,7 @@ dsh plugin --profile web add "$DSH_HOME/dsh-go/plugins/local-prompt-polish"
 
 ```sh
 node --check lib/index.js && node --check lib/polish.js
-node test/selftest.mjs        # 191 项断言
+node test/selftest.mjs        # 197 项断言
 ```
 
 插件检查器（需要本机装了 dsh-go 的 skill kit）：
@@ -221,7 +221,7 @@ local-prompt-polish/
 │   ├── settings.js       # 设置面板 polish-settings：v2 表单 / v1 降级、9 个 action
 │   ├── polish.js         # 路由解析、上下文抽取、模型改写、复述检测、长度档、本地兜底
 │   └── log.js            # .log.jsonl 追加写（只记长度与状态）
-├── test/selftest.mjs     # 191 项断言
+├── test/selftest.mjs     # 197 项断言
 ├── docs/
 │   ├── architecture.md   # 原理与边界
 │   ├── settings.md       # 设置项清单与页面结构

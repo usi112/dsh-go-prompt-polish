@@ -1,6 +1,6 @@
 {
   "name": "local-prompt-polish",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "private": true,
   "description": "输入框上方的「优化提示词」胶囊：9 套场景预设、长度三档、模型分组、确认页可重做；上下文条数与字数可自由设置",
   "type": "module",
