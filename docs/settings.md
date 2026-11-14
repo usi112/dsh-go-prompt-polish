@@ -17,7 +17,8 @@
 | `length` | 枚举 `detailed` / `medium` / `simple` | `medium`（`DEFAULT_LENGTH`） | 输出长度档；非法值回落 `medium` | `polishOptions()` → `lib/polish.js → tierOf()`（`maxTokens` / `maxChars`）+ `systemPrompt()` 第 7 条 |
 | `presetId` | 字符串 | `default`（`DEFAULT_PRESET_ID`） | 当前选中的预设；指向不存在的 id 时回落内置「默认」 | `polishOptions()` → `activePreset()` → `systemPrompt()` 第 8 条 |
 | `presets[]` | 数组，元素 `{ id, instruction }`（内置）或 `{ id, name, instruction }`（自定义） | `[]` | 预设改动：**id 是 9 套内置之一 → 只认 instruction，等于改内置预设的内容**；其他 id → 自定义预设（最多 12 个，`name` ≤ 24 字且不能为空）。`instruction` ≤ 500 字；重复 id 只留第一条 | `presetsOf(config, zh)` → `polishOptions()` → `systemPrompt()` 第 8 条 |
-| `contextStrategy` | `smart` \| `recent` | `smart` | 长会话上下文策略：`smart` 先取宿主 `compaction/summary` 摘要（≤40% 预算）再补摘要后的最近消息；`recent` 只看最近消息（=1.3.0） | `polishOptions().context` → `collectContext()` |
+| `contextStrategy` | `smart` \| `recent` | `smart` | 长会话上下文策略：`smart` = 背景（摘要/任务清单）+ BM25 片段 + 最近消息；`recent` 只看最近消息（=1.3.0） | `polishOptions().context` → `collectContext()` |
+| `contextPicker` | 布尔 | `false` | 是否让模型从 BM25 候选里再挑一次（多一次 maxTokens 60 的调用；失败回落 BM25） | `collectContextWithPicker()` → `pickContextSnippets()` |
 | `contextMessages` | 整数 | `12` | 读取最近多少条 user/assistant 消息做上下文，范围 1–32 | `polishOptions().context` → `lib/polish.js → collectContext()` |
 | `contextChars` | 整数 | `2000` | 上下文总字数上限，范围 200–8000 | 同上 |
 | `modelProvider` | 字符串 | `''`（跟随会话模型） | 固定使用的 provider id，例如 `deepseek` | `polishOptions().model` → `requestPolish()` 优先用它，否则 `resolveRoute()` 走会话模型 |
@@ -127,6 +128,7 @@ polish-settings（stack，标题「提示词优化设置」）
       │  ├─ toggle     保留代码、路径与标识符   bind data.form.keepCode
       │  ├─ toggle     确认页显示改写说明       bind data.form.showNotes
       │  ├─ toggle     允许使用附加指令         bind data.form.allowExtra
+      │  ├─ toggle     让模型再筛一次相关片段   bind data.form.contextPicker
       │  ├─ segmented  长会话怎么读上下文  bind data.form.contextStrategy（smart / recent）
       │  ├─ text        contextHint（默认 12 条 / 2000 字，条数 1–32、字数 200–8000）
       │  ├─ number     读取最近几条消息         bind data.form.contextMessages（1–32）
@@ -275,11 +277,12 @@ lib/index.js → loadConfig()            ← 读文件原文；和上次读到�
 
 | 策略 | 取什么 | 预算 | 等价于 |
 |---|---|---|---|
-| `smart`（默认） | ① 背景（25%）：`compaction/summary`；无摘要时用最后一次 `todo/write` + `session/title`；② 相关片段（35%）：草稿关键词在摘要后、最近窗口前的历史里命中；③ 最近 N 条（其余） | 三层合计不超 `contextChars`（默认 2000） | 1.7.0 新行为 |
+| `smart`（默认） | ① 背景（25%）：`compaction/summary`；无摘要时用最后一次 `todo/write` + `session/title`；② 相关片段（35%）：完整 BM25（IDF + 长度归一化）在摘要后、最近窗口前的历史（消息与工具结果，按 400 字切块）里排序取前 3；③ 最近 N 条（其余） | 三层合计不超 `contextChars`（默认 2000） | 1.7.0 新行为 |
 | `recent` | 只取最近 N 条消息 | 全部给消息 | 1.3.0 |
 
 - 背景优先用摘要；没有摘要（短会话、没触发过压缩）时改用最后一次 `todo/write` 与 `session/title`，两者都没有就不放背景段。
-- 相关片段是纯本地字符串匹配（英文 token + 中文 bigram，≥2 个词命中才入选），不调模型、不联网；被摘要覆盖或已在最近窗口里的内容不会重复放。
+- 相关片段是完整 BM25：文档按 400 字切块，查询与文档同一套分词（英文 token + 中文 bigram），`k1 = 1.2`、`b = 0.75`，要求命中 ≥2 个不同查询词；纯本地计算，不调模型、不联网。
+- 打开 `contextPicker` 后会多一次小调用：把候选的编号 + 开头 80 字交给模型，要求返回 JSON 数组；`[]` 表示都不相关（不塞片段），解析失败或调用失败则回落到 BM25 结果。
 - 输出带「【会话标题】」「【最近任务清单】」「【更早对话摘要】」「【相关片段】」「【最近对话】」等小标题，让模型知道时序。
 
 ## 已知限制

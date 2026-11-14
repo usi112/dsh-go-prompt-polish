@@ -23,7 +23,7 @@ import {
 } from '../lib/config.js'
 import * as settings from '../lib/settings.js'
 import { __setModelsForTest, buildData, settingsView } from '../lib/settings.js'
-import { LENGTH_TIERS, buildLocalPrompt, collectContext, resolveRoute, stripEcho, systemPrompt } from '../lib/polish.js'
+import { LENGTH_TIERS, buildLocalPrompt, collectContext, collectContextWithPicker, pickContextSnippets, resolveRoute, stripEcho, systemPrompt } from '../lib/polish.js'
 
 // Every config read in this run goes to a throwaway file, never the real one.
 const sandbox = mkdtempSync(join(tmpdir(), 'prompt-polish-'))
@@ -155,6 +155,46 @@ ok(searched.includes('【相关片段】'), 'keyword search surfaces older match
 ok(searched.includes('sourceGroup'), 'the matching snippet keeps the keyword')
 ok(searched.includes('【最近对话】'), 'recent turns are still included')
 
+// BM25：罕见词（IDF 高）应排在常见词前面
+const bm25Log = [
+  { type: 'user/message', data: { content: [{ type: 'text', text: '设置页面还要改一下措辞' }] } },
+  { type: 'user/message', data: { content: [{ type: 'text', text: 'sourceGroup 的分组规则要按 provider 前缀判断' }] } },
+  { type: 'user/message', data: { content: [{ type: 'text', text: '最近一条' }] } },
+]
+const bm25 = collectContext(fakeCtx({ log: bm25Log }), 's1', { strategy: 'smart', messages: 1, chars: 2000 }, 'sourceGroup 分组怎么判断')
+const firstSnippet = bm25.split('【相关片段】')[1]?.split('【最近对话】')[0]?.trim().split('\n')[0] ?? ''
+ok(firstSnippet.includes('sourceGroup'), 'BM25 ranks the rare-term document first')
+
+// C：模型再筛一次（picker）
+const pickLog = [
+  { type: 'user/message', data: { content: [{ type: 'text', text: 'A：sourceGroup 的判定写在 settings.js' }] } },
+  { type: 'user/message', data: { content: [{ type: 'text', text: 'B：sourceGroup 的判定还要看 provider 名字' }] } },
+  { type: 'user/message', data: { content: [{ type: 'text', text: '最近一条' }] } },
+]
+const pickerLlm = {
+  prepareCall: async (config) => ({
+    config,
+    stream: async function* () {
+      yield { type: 'text-delta', text: '[2]' }
+      yield { type: 'finish', reason: { kind: 'stop' } }
+    },
+  }),
+}
+const pickerCtx = { get: (name) => (name === 'llm' ? pickerLlm : undefined) }
+const picked = await pickContextSnippets(pickerCtx, { provider: 'p', model: 'm' }, [
+  { role: 'user', text: 'A：sourceGroup 的判定写在 settings.js' },
+  { role: 'user', text: 'B：sourceGroup 还要看 provider 名字' },
+], 'sourceGroup 怎么判断', new AbortController().signal)
+eq(picked.length, 1, 'the picker keeps only the chosen snippet')
+ok(picked[0].text.startsWith('B：'), 'the picker honours the model index')
+
+const failingLlm = { prepareCall: async () => ({ config: {}, stream: async function* () { yield { type: 'text-delta', text: '不是 JSON' } } }) }
+const failingPicker = { get: (name) => (name === 'llm' ? failingLlm : undefined) }
+eq(await pickContextSnippets(failingPicker, { provider: 'p', model: 'm' }, [{ role: 'user', text: 'x' }], 'x', new AbortController().signal), undefined, 'a failed pick falls back to BM25')
+
+const smartPicker = await collectContextWithPicker(fakeCtx({ log: pickLog }), 's1', { strategy: 'smart', picker: true, messages: 1, chars: 2000 }, 'sourceGroup 判定怎么判断', { provider: 'p', model: 'm' })
+ok(smartPicker.includes('A：') || smartPicker.includes('B：'), 'picker mode still renders snippets')
+
 // 预算：总量不超过设定字数
 const tiny = collectContext(fakeCtx({ log: withHistory }), 's1', { strategy: 'smart', messages: 1, chars: 200 }, 'sourceGroup')
 ok(tiny.length <= 200, 'the whole context respects the character budget')
@@ -247,7 +287,7 @@ ok(!('message.actions' in pkg.dshGo.contributes), 'no leftover probe contributio
 // ── config: defaults, tolerance, presets ───────────────────────────────────
 eq(loadConfig().enabled, true, 'a missing config file means defaults')
 eq(loadConfig().length, DEFAULT_LENGTH, 'the default tier is medium')
-eq(polishOptions(defaults(), true), { length: 'medium', keepTerms: true, keepCode: true, preset: undefined, extra: undefined, context: { strategy: 'smart', messages: 12, chars: 2000 }, model: undefined }, 'defaults keep the 1.3.0 prompt and raise the context budget')
+eq(polishOptions(defaults(), true), { length: 'medium', keepTerms: true, keepCode: true, preset: undefined, extra: undefined, context: { strategy: 'smart', picker: false, messages: 12, chars: 2000 }, model: undefined }, 'defaults keep the 1.3.0 prompt and raise the context budget')
 const dirty = normalize({ length: 'huge', presetId: 'nope', presets: [{ id: 'p1', name: '  ', instruction: 'x' }, { id: 'p2', name: '严谨', extra: 1 }], extra: 'y'.repeat(900) })
 eq(dirty.config.length, 'medium', 'an unknown tier falls back to medium')
 eq(dirty.config.presetId, 'default', 'an unknown preset id falls back to the built-in one')
