@@ -113,7 +113,11 @@ const many = collectContext(fakeCtx({ log: longLog }), 's1', { messages: 3, char
 eq(many.split('\n').filter((line) => line.startsWith('用户：') || line.startsWith('助手：')).length, 3, 'the context message count follows the setting')
 const short = collectContext(fakeCtx({ log: longLog }), 's1', { messages: 10, chars: 200 })
 ok(short.length <= 200, 'the context character budget follows the setting')
-eq(collectContext(fakeCtx({ log: longLog }), 's1').split('\n').filter((line) => line.startsWith('用户：') || line.startsWith('助手：')).length, 8, 'the default remains 8 messages')
+const manyLog = Array.from({ length: 15 }, (_, i) => ({
+  type: 'user/message',
+  data: { content: [{ type: 'text', text: `第${i + 1}条：${'内容'.repeat(20)}` }] },
+}))
+eq(collectContext(fakeCtx({ log: manyLog }), 's1').split('\n').filter((line) => line.startsWith('用户：') || line.startsWith('助手：')).length, 12, 'the default reads 12 messages')
 
 // 长会话：智能策略优先用宿主压缩摘要 + 摘要之后的最近消息；recent 保持旧行为
 const compacted = [
@@ -127,6 +131,34 @@ const smart = collectContext(fakeCtx({ log: compacted }), 's1', { strategy: 'sma
 ok(smart.includes('【更早对话摘要】') && smart.includes('前 20 轮'), 'smart context carries the compaction summary')
 ok(smart.includes('继续做上下文设置'), 'smart context keeps the turns after the summary')
 ok(!smart.includes('最早的目标'), 'summarised turns are not repeated verbatim')
+// 任务锚点：没有摘要时用最后一次 todo/write + 标题
+const withTodo = [
+  { type: 'session/title', data: { title: '给插件加设置页' } },
+  { type: 'todo/write', data: { todos: [
+    { content: '预设与长度档', status: 'completed' },
+    { content: '模型按来源分组', status: 'in_progress' },
+  ] } },
+  { type: 'user/message', data: { content: [{ type: 'text', text: '继续' }] } },
+]
+const anchored = collectContext(fakeCtx({ log: withTodo }), 's1', { strategy: 'smart', messages: 12, chars: 2000 })
+ok(anchored.includes('【会话标题】给插件加设置页'), 'smart context carries the session title')
+ok(anchored.includes('[x] 预设与长度档') && anchored.includes('[~] 模型按来源分组'), 'smart context carries the todo list')
+
+// 关键词检索：草稿里提到的词能从早期消息/工具结果里捞出来
+const withHistory = [
+  { type: 'user/message', data: { content: [{ type: 'text', text: '模型列表要按 sourceGroup 分组，deepseek-account 算官方' }] } },
+  { type: 'tool/result', data: { content: 'grep 命中：settings.js 的 sourceGroup 与 OFFICIAL_HINT' } },
+  { type: 'user/message', data: { content: [{ type: 'text', text: '最近一条无关的话' }] } },
+]
+const searched = collectContext(fakeCtx({ log: withHistory }), 's1', { strategy: 'smart', messages: 1, chars: 2000 }, '再看下 sourceGroup 的分组')
+ok(searched.includes('【相关片段】'), 'keyword search surfaces older matches')
+ok(searched.includes('sourceGroup'), 'the matching snippet keeps the keyword')
+ok(searched.includes('【最近对话】'), 'recent turns are still included')
+
+// 预算：总量不超过设定字数
+const tiny = collectContext(fakeCtx({ log: withHistory }), 's1', { strategy: 'smart', messages: 1, chars: 200 }, 'sourceGroup')
+ok(tiny.length <= 200, 'the whole context respects the character budget')
+
 const recentOnly = collectContext(fakeCtx({ log: compacted }), 's1', { strategy: 'recent', messages: 8, chars: 1600 })
 ok(!recentOnly.includes('【更早对话摘要】'), 'recent strategy ignores the summary')
 ok(recentOnly.includes('最早的目标'), 'recent strategy still reads the old turns')
@@ -215,7 +247,7 @@ ok(!('message.actions' in pkg.dshGo.contributes), 'no leftover probe contributio
 // ── config: defaults, tolerance, presets ───────────────────────────────────
 eq(loadConfig().enabled, true, 'a missing config file means defaults')
 eq(loadConfig().length, DEFAULT_LENGTH, 'the default tier is medium')
-eq(polishOptions(defaults(), true), { length: 'medium', keepTerms: true, keepCode: true, preset: undefined, extra: undefined, context: { strategy: 'smart', messages: 8, chars: 1600 }, model: undefined }, 'defaults keep the 1.3.0 prompt and sizes')
+eq(polishOptions(defaults(), true), { length: 'medium', keepTerms: true, keepCode: true, preset: undefined, extra: undefined, context: { strategy: 'smart', messages: 12, chars: 2000 }, model: undefined }, 'defaults keep the 1.3.0 prompt and raise the context budget')
 const dirty = normalize({ length: 'huge', presetId: 'nope', presets: [{ id: 'p1', name: '  ', instruction: 'x' }, { id: 'p2', name: '严谨', extra: 1 }], extra: 'y'.repeat(900) })
 eq(dirty.config.length, 'medium', 'an unknown tier falls back to medium')
 eq(dirty.config.presetId, 'default', 'an unknown preset id falls back to the built-in one')
@@ -233,7 +265,7 @@ eq(presetName(presetsOf(defaults())[0], false), 'Default', 'the built-in preset 
 ok(newPreset(defaults(), true).id === 'p1', 'the first new preset gets id p1')
 
 // 上下文设置：自由填，越界回落
-eq([defaults().contextMessages, defaults().contextChars], [8, 1600], 'context defaults match 1.3.0')
+eq([defaults().contextMessages, defaults().contextChars], [12, 2000], 'context defaults are 12 messages / 2000 chars')
 eq(normalize({ contextMessages: 0 }).config.contextMessages, 1, 'context messages clamp low')
 eq(normalize({ contextMessages: 999 }).config.contextMessages, 32, 'context messages clamp high')
 eq(normalize({ contextChars: 10 }).config.contextChars, 200, 'context chars clamp low')

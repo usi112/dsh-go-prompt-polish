@@ -18,8 +18,8 @@
 | `presetId` | 字符串 | `default`（`DEFAULT_PRESET_ID`） | 当前选中的预设；指向不存在的 id 时回落内置「默认」 | `polishOptions()` → `activePreset()` → `systemPrompt()` 第 8 条 |
 | `presets[]` | 数组，元素 `{ id, instruction }`（内置）或 `{ id, name, instruction }`（自定义） | `[]` | 预设改动：**id 是 9 套内置之一 → 只认 instruction，等于改内置预设的内容**；其他 id → 自定义预设（最多 12 个，`name` ≤ 24 字且不能为空）。`instruction` ≤ 500 字；重复 id 只留第一条 | `presetsOf(config, zh)` → `polishOptions()` → `systemPrompt()` 第 8 条 |
 | `contextStrategy` | `smart` \| `recent` | `smart` | 长会话上下文策略：`smart` 先取宿主 `compaction/summary` 摘要（≤40% 预算）再补摘要后的最近消息；`recent` 只看最近消息（=1.3.0） | `polishOptions().context` → `collectContext()` |
-| `contextMessages` | 整数 | `8` | 读取最近多少条 user/assistant 消息做上下文，范围 1–32 | `polishOptions().context` → `lib/polish.js → collectContext()` |
-| `contextChars` | 整数 | `1600` | 上下文总字数上限，范围 200–8000 | 同上 |
+| `contextMessages` | 整数 | `12` | 读取最近多少条 user/assistant 消息做上下文，范围 1–32 | `polishOptions().context` → `lib/polish.js → collectContext()` |
+| `contextChars` | 整数 | `2000` | 上下文总字数上限，范围 200–8000 | 同上 |
 | `modelProvider` | 字符串 | `''`（跟随会话模型） | 固定使用的 provider id，例如 `deepseek` | `polishOptions().model` → `requestPolish()` 优先用它，否则 `resolveRoute()` 走会话模型 |
 | `modelModel` | 字符串 | `''` | 固定使用的 model id，例如 `deepseek-chat`；与 `modelProvider` 成对生效，只填一个按「跟随会话」处理 | 同上 |
 | `keepTerms` | 布尔 | `true` | 保留草稿里的专有名词 | `polishOptions()` → `systemPrompt()` 第 4 条（`keepRule()`） |
@@ -128,7 +128,7 @@ polish-settings（stack，标题「提示词优化设置」）
       │  ├─ toggle     确认页显示改写说明       bind data.form.showNotes
       │  ├─ toggle     允许使用附加指令         bind data.form.allowExtra
       │  ├─ segmented  长会话怎么读上下文  bind data.form.contextStrategy（smart / recent）
-      │  ├─ text        contextHint（默认 8 条 / 1600 字，条数 1–32、字数 200–8000）
+      │  ├─ text        contextHint（默认 12 条 / 2000 字，条数 1–32、字数 200–8000）
       │  ├─ number     读取最近几条消息         bind data.form.contextMessages（1–32）
       │  ├─ number     上下文总字数上限         bind data.form.contextChars（200–8000，step 100）
       │  └─ textField  附加指令 bind data.form.extra，multiline，maxLines 4，maxLength 500
@@ -275,12 +275,12 @@ lib/index.js → loadConfig()            ← 读文件原文；和上次读到�
 
 | 策略 | 取什么 | 预算 | 等价于 |
 |---|---|---|---|
-| `smart`（默认） | 最后一个 `compaction/summary` 的 `summary` + 摘要之后的最近 N 条消息 | 摘要 ≤ 40% `contextChars`，其余给消息；总量不超 `contextChars` | 1.7.0 新行为 |
+| `smart`（默认） | ① 背景（25%）：`compaction/summary`；无摘要时用最后一次 `todo/write` + `session/title`；② 相关片段（35%）：草稿关键词在摘要后、最近窗口前的历史里命中；③ 最近 N 条（其余） | 三层合计不超 `contextChars`（默认 2000） | 1.7.0 新行为 |
 | `recent` | 只取最近 N 条消息 | 全部给消息 | 1.3.0 |
 
-- 摘要来自宿主自己的压缩流程（`dsh-compaction`），插件只读日志，不额外调模型、不联网。
-- 被摘要覆盖的旧消息不会重复展开；没有摘要事件时 `smart` 与 `recent` 输出相同。
-- 输出会带「【更早对话摘要】」「【最近对话】」两个小标题，让模型知道时序。
+- 背景优先用摘要；没有摘要（短会话、没触发过压缩）时改用最后一次 `todo/write` 与 `session/title`，两者都没有就不放背景段。
+- 相关片段是纯本地字符串匹配（英文 token + 中文 bigram，≥2 个词命中才入选），不调模型、不联网；被摘要覆盖或已在最近窗口里的内容不会重复放。
+- 输出带「【会话标题】」「【最近任务清单】」「【更早对话摘要】」「【相关片段】」「【最近对话】」等小标题，让模型知道时序。
 
 ## 已知限制
 
