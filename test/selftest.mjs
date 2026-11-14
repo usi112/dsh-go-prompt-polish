@@ -199,6 +199,24 @@ ok(smartPicker.includes('A：') || smartPicker.includes('B：'), 'picker mode st
 const tiny = collectContext(fakeCtx({ log: withHistory }), 's1', { strategy: 'smart', messages: 1, chars: 200 }, 'sourceGroup')
 ok(tiny.length <= 200, 'the whole context respects the character budget')
 
+// 背景共存：有摘要时也保留任务清单（两者互补）
+const summaryPlusTodo = [
+  { type: 'compaction/summary', data: { summary: '早期摘要：目标是加设置页' } },
+  { type: 'todo/write', data: { todos: [{ content: '上下文三层', status: 'in_progress' }] } },
+  { type: 'user/message', data: { content: [{ type: 'text', text: '继续' }] } },
+]
+const both = collectContext(fakeCtx({ log: summaryPlusTodo }), 's1', { strategy: 'smart', messages: 12, chars: 2000 })
+ok(both.includes('【更早对话摘要】') && both.includes('【最近任务清单】'), 'summary and todo anchor coexist')
+
+// 预算很紧时优先保留最新的消息
+const newestFirst = [
+  { type: 'user/message', data: { content: [{ type: 'text', text: '旧的：第一轮讨论' }] } },
+  { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: '旧的：第二轮讨论' }] } } },
+  { type: 'user/message', data: { content: [{ type: 'text', text: '最新的一条：请按这个改' }] } },
+]
+const tight = collectContext(fakeCtx({ log: newestFirst }), 's1', { strategy: 'smart', messages: 12, chars: 200 })
+ok(tight.includes('最新的一条'), 'a tight budget keeps the newest message')
+
 const recentOnly = collectContext(fakeCtx({ log: compacted }), 's1', { strategy: 'recent', messages: 8, chars: 1600 })
 ok(!recentOnly.includes('【更早对话摘要】'), 'recent strategy ignores the summary')
 ok(recentOnly.includes('最早的目标'), 'recent strategy still reads the old turns')

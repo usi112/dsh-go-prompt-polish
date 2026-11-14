@@ -90,7 +90,7 @@ Requires dsh ≥ 0.2.1-rc.2 and app ≥ 1.0.11 (native plugin protocol v1). Code
 
 ```sh
 node --check lib/index.js && node --check lib/polish.js
-node test/selftest.mjs          # 208 assertions
+node test/selftest.mjs          # 210 assertions
 node "$DSH_HOME/skills/dsh-go-plugin/kit/bin/check.mjs" . --load   # 1 capsule · 2 panels · 1 composer tool
 ```
 
@@ -106,7 +106,7 @@ local-prompt-polish/
 │   ├── settings.js       # settings panel polish-settings: v2 form / v1 fallback, 9 actions
 │   ├── polish.js         # routing, context, rewrite, echo strip, length tiers, local fallback
 │   └── log.js            # append-only .log.jsonl (lengths and states only)
-├── test/selftest.mjs     # 208 assertions
+├── test/selftest.mjs     # 210 assertions
 ├── docs/
 │   ├── architecture.md   # how it works and its limits
 │   ├── settings.md       # settings fields and page structure
